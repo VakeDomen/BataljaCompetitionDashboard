@@ -4,7 +4,7 @@ use actix_cors::Cors;
 use actix_web::HttpServer;
 use actix_web_httpauth::extractors::bearer::Config;
 use dotenv::dotenv;
-use actix_web::{App, http, middleware::Logger};
+use actix_web::{App, web, http, middleware::Logger};
 
 use crate::routes::login::login;
 
@@ -37,7 +37,10 @@ async fn main() -> std::io::Result<()>  {
             .wrap(Logger::new("TIME: %T s | FROM: %a | RESP: %s | %r %{User-Agent}i (msg size in byted: %b)"))
             .wrap(cors)
             .app_data(Config::default())
-            .service(login)
+            .service(
+                web::scope("/api")
+                .service(login)
+            )
             
     });
     println!("[SETUP] Running server on 0.0.0.0:{}", port);
