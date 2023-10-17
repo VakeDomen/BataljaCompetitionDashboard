@@ -2,7 +2,8 @@ use actix_web::{HttpResponse, post, web};
 use serde::Deserialize;
 use crate::controllers::ldap::ldap_login;
 use crate::controllers::jwt::encode_jwt;
-use crate::models::student::Student;
+use crate::db::operations_users::{get_student_by_id, get_student_by_studnet_number, insert_student};
+use crate::models::student::{NewStudent, LdapStudent};
 use std::env;
 
 #[derive(Deserialize)]
@@ -38,7 +39,7 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
     
     let student_number: i32 = match username.parse() {
         Ok(num) => num,
-        Err(e) => return HttpResponse::Unauthorized().finish()
+        Err(_) => return HttpResponse::Unauthorized().finish()
     };
     
 
@@ -52,10 +53,16 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
         None => return HttpResponse::Unauthorized().finish()
     };
     
-    // match get_user_by_student_id(student_number) {
-    //     Some(student) => (),
-    //     None => insert_student(Student{ student_number, ldap_dn: ldap_dn.clone(), in_group: false}),
-    // };
+    // insert new student
+    if let None = get_student_by_studnet_number(student_number.to_string()).ok() {
+        let new_student = NewStudent::from(LdapStudent {
+            student_number, 
+            ldap_dn: ldap_dn.clone() 
+        });
+        if let Err(e) = insert_student(new_student) {
+            return HttpResponse::InternalServerError().json(e.to_string());
+        }
+    };
 
     match encode_jwt(ldap_dn) {
         Ok(token) => HttpResponse::Ok().body(token),

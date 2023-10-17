@@ -21,4 +21,5 @@ r2d2-diesel = "1.0.0"
 serde = "1.0.189"
 serde_json = "1.0.107"
 tokio = "1.33.0"
-uuid = "1.4.1"
+uuid = { version = "1.1.2", features = ["serde", "v4"] }
+chrono = { version = "0.4", features = ["serde"] } # date
