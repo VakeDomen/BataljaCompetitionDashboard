@@ -2,7 +2,7 @@ use actix_web::{HttpResponse, post, web};
 use serde::Deserialize;
 use crate::controllers::ldap::ldap_login;
 use crate::controllers::jwt::encode_jwt;
-use crate::db::operations_users::{get_student_by_id, get_student_by_studnet_number, insert_student};
+use crate::db::operations_users::{get_student_by_studnet_number, insert_student};
 use crate::models::student::{NewStudent, LdapStudent};
 use std::env;
 
@@ -57,14 +57,15 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
     if let None = get_student_by_studnet_number(student_number.to_string()).ok() {
         let new_student = NewStudent::from(LdapStudent {
             student_number, 
-            ldap_dn: ldap_dn.clone() 
+            ldap_dn: ldap_dn 
         });
         if let Err(e) = insert_student(new_student) {
             return HttpResponse::InternalServerError().json(e.to_string());
         }
     };
 
-    match encode_jwt(ldap_dn) {
+
+    match encode_jwt(student_number.to_string()) {
         Ok(token) => HttpResponse::Ok().body(token),
         Err(e) => HttpResponse::InternalServerError().json(e.to_string()),
     }
