@@ -43,6 +43,17 @@ pub fn get_team_by_student(user: Student) -> Result<Team, Error> {
     }
 }
 
+// pub fn get_team_by_competition(user: Student) -> Result<Team, Error> {
+//     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+//     match teams
+//         .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
+//         .first::<SqlTeam>(&mut conn) {
+//             Ok(t) => Ok(Team::from(t)),
+//             Err(e) => Err(e)
+//     }
+// }
+
+
 pub fn leave_team(team: Team, user: Student) -> Result<(), Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     diesel::update(teams.filter(
