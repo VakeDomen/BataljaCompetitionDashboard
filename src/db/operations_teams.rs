@@ -33,9 +33,10 @@ pub fn get_team_by_id(uid: String) -> Result<Team, Error> {
     }
 }
 
-pub fn get_team_by_student(user: User) -> Result<Team, Error> {
+pub fn get_team_by_student_for_competition(user: User, comp_id: String) -> Result<Team, Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     match teams
+        .filter(competition_id.eq(comp_id))
         .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
         .first::<SqlTeam>(&mut conn) {
             Ok(t) => Ok(Team::from(t)),
@@ -66,6 +67,17 @@ pub fn disband_team(team: Team, user: User) -> Result<(), Error> {
 pub fn in_member_of_a_team(user: User) -> bool {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     match teams
+        .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
+        .first::<SqlTeam>(&mut conn) {
+            Ok(_) => true,
+            Err(_) => false
+    }
+}
+
+pub fn in_member_of_a_team_on_competition(user: User, comp_id: String) -> bool {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    match teams
+        .filter(competition_id.eq(comp_id))
         .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
         .first::<SqlTeam>(&mut conn) {
             Ok(_) => true,

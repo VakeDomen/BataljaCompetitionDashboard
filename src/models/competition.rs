@@ -1,10 +1,10 @@
 use diesel::prelude::{Insertable, Queryable};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use chrono::{NaiveDateTime, Local};
 use uuid::Uuid;
 use crate::db::schema::competitions::{self};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct NewCompetition {
     name: String,
     start: NaiveDateTime,

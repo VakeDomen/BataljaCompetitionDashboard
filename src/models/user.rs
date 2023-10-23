@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::db::schema::users::{self};
 
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub enum Role {
     Student,
     Admin

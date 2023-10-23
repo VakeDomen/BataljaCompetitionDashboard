@@ -1,7 +1,10 @@
 use std::env;
 
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use serde::{Deserialize, Serialize};
 use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm, encode, Header, EncodingKey, errors::Error};
+
+use crate::{models::user::User, db::operations_users::get_user_by_username};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -29,6 +32,21 @@ pub fn decode_jwt(token: String) -> Option<String> {
         Ok(data) => Some(data.claims.sub),
         Err(e) =>  {
             println!("Error decoding JTW token: {:#?}", e.to_string());
+            None
+        }
+    }
+}
+
+pub fn exchange_token_for_user(token: BearerAuth) -> Option<User> {
+    let email = match decode_jwt(token.token().to_string()) {
+        Some(uid) => uid,
+        None => return None,
+    };
+
+    match get_user_by_username(email) {
+        Ok(user) => Some(user),
+        Err(e) => {
+            eprintln!("[JWT exchange_token_for_user] Error finding user: {:#?}", e);
             None
         }
     }
