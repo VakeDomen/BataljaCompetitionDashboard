@@ -27,7 +27,7 @@ pub fn get_student_by_id(uid: String) -> Result<Student, Error> {
 pub fn get_student_by_studnet_number(num: String) -> Result<Student, Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     match users
-        .filter(student_number.eq(num))
+        .filter(username.eq(num))
         .first::<SqlStudent>(&mut conn) {
             Ok(u) => Ok(Student::from(u)),
             Err(e) => Err(e)

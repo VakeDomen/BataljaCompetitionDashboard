@@ -1,6 +1,6 @@
 CREATE TABLE users (
     id              VARCHAR(255) NOT NULL PRIMARY KEY,
-    student_number  VARCHAR(255) NOT NULL,
+    username        VARCHAR(255) NOT NULL,
     ldap_dn         VARCHAR(255) NOT NULL,
     created         DATETIME NOT NULL
 );
@@ -8,8 +8,8 @@ CREATE TABLE users (
 CREATE TABLE competitions (
     id                      VARCHAR(255) NOT NULL PRIMARY KEY,
     name                    VARCHAR(255) NOT NULL,
-    start                   VARCHAR(255) NOT NULL,
-    end                     VARCHAR(255) NOT NULL,
+    start                   DATETIME NOT NULL,
+    end                     DATETIME NOT NULL,
     allowed_submissions     VARCHAR(255) NOT NULL,
     round                   VARCHAR(255) NOT NULL,
     type                    VARCHAR(255) NOT NULL,

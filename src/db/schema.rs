@@ -18,10 +18,8 @@ diesel::table! {
         id -> Varchar,
         #[max_length = 255]
         name -> Varchar,
-        #[max_length = 255]
-        start -> Varchar,
-        #[max_length = 255]
-        end -> Varchar,
+        start -> Datetime,
+        end -> Datetime,
         #[max_length = 255]
         allowed_submissions -> Varchar,
         #[max_length = 255]
@@ -88,7 +86,7 @@ diesel::table! {
         #[max_length = 255]
         id -> Varchar,
         #[max_length = 255]
-        student_number -> Varchar,
+        username -> Varchar,
         #[max_length = 255]
         ldap_dn -> Varchar,
         created -> Datetime,

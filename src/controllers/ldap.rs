@@ -2,7 +2,7 @@ use ldap3::{Scope, SearchEntry, LdapConnAsync};
 use ldap3::result::Result;
 use std::env;
 
-pub async fn ldap_login(username: i32, password: String) -> Result<Option<String>> {
+pub async fn ldap_login(username: String, password: String) -> Result<Option<String>> {
     let (conn, mut ldap_conn) = LdapConnAsync::new(&env::var("LDAP_SERVER").expect("$LDAP_SERVER is not set")).await?;
     ldap3::drive!(conn);
 

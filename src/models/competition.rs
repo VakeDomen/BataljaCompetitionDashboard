@@ -1,14 +1,14 @@
 use diesel::prelude::{Insertable, Queryable};
 use serde::Serialize;
-use chrono::{NaiveDateTime, Local, NaiveDate};
+use chrono::{NaiveDateTime, Local};
 use uuid::Uuid;
 use crate::db::schema::competitions::{self};
 
 #[derive(Debug)]
 pub struct NewCompetition {
     name: String,
-    start: NaiveDate,
-    end: NaiveDate,
+    start: NaiveDateTime,
+    end: NaiveDateTime,
     type_: String,
 }
 
@@ -16,8 +16,8 @@ pub struct NewCompetition {
 pub struct Competition {
     pub id: String,
     pub name: String,
-    pub start: NaiveDate,
-    pub end: NaiveDate,
+    pub start: NaiveDateTime,
+    pub end: NaiveDateTime,
     pub allowed_submissions: bool,
     pub round: i32,
     pub type_: String,
@@ -29,8 +29,8 @@ pub struct Competition {
 pub struct SqlCompetition {
     pub id: String,
     pub name: String,
-    pub start: String,
-    pub end: String,
+    pub start: NaiveDateTime,
+    pub end: NaiveDateTime,
     pub allowed_submissions: String,
     pub round: String,
     pub type_: String,
@@ -41,8 +41,8 @@ pub struct SqlCompetition {
 pub struct PublicCompetition {
     pub id: String,
     pub name: String,
-    pub start: NaiveDate,
-    pub end: NaiveDate,
+    pub start: NaiveDateTime,
+    pub end: NaiveDateTime,
     pub allowed_submissions: bool,
     pub round: i32,
     pub type_: String,
@@ -54,8 +54,8 @@ impl From<SqlCompetition> for Competition {
         Self {
             id: sql_competition.id,
             name: sql_competition.name,
-            start: sql_competition.start.parse().unwrap(),
-            end: sql_competition.end.parse().unwrap(),
+            start: sql_competition.start.into(),
+            end: sql_competition.end.into(),
             allowed_submissions: sql_competition.allowed_submissions.parse().unwrap(),
             round: sql_competition.round.parse().unwrap(),
             type_: sql_competition.type_,
@@ -84,8 +84,8 @@ impl From<NewCompetition> for SqlCompetition {
         Self {
             id: Uuid::new_v4().to_string(),
             name: new_competition.name,
-            start: new_competition.start.to_string(),
-            end: new_competition.end.to_string(),
+            start: new_competition.start,
+            end: new_competition.end,
             allowed_submissions: true.to_string(),
             round: 0.to_string(),
             type_: new_competition.type_,

@@ -36,14 +36,8 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
             };
         }
     }
-    
-    let student_number: i32 = match username.parse() {
-        Ok(num) => num,
-        Err(_) => return HttpResponse::Unauthorized().finish()
-    };
-    
 
-    let ldap_dn_option = match ldap_login(student_number, password).await {
+    let ldap_dn_option = match ldap_login(username.clone(), password).await {
         Ok(b) => b,
         Err(e) => { println!("ERROR: {:#?}", e); None },
     };
@@ -54,9 +48,9 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
     };
     
     // insert new student
-    if let None = get_student_by_studnet_number(student_number.to_string()).ok() {
+    if let None = get_student_by_studnet_number(username.clone()).ok() {
         let new_student = NewStudent::from(LdapStudent {
-            student_number, 
+            username: username.clone(), 
             ldap_dn: ldap_dn 
         });
         if let Err(e) = insert_student(new_student) {
@@ -65,7 +59,7 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
     };
 
 
-    match encode_jwt(student_number.to_string()) {
+    match encode_jwt(username) {
         Ok(token) => HttpResponse::Ok().body(token),
         Err(e) => HttpResponse::InternalServerError().json(e.to_string()),
     }

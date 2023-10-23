@@ -7,14 +7,14 @@ use crate::db::schema::users::{self};
 
 #[derive(Debug)]
 pub struct LdapStudent {
-    pub student_number: i32,
+    pub username: String,
     pub ldap_dn: String,
 }
 
 #[derive(Debug)]
 pub struct NewStudent {
     id: String,
-    student_number: i32,
+    username: String,
     ldap_dn: String,
     created: NaiveDateTime,
 }
@@ -22,7 +22,7 @@ pub struct NewStudent {
 #[derive(Debug)]
 pub struct Student {
     pub id: String,
-    pub student_number: i32,
+    pub username: String,
     pub ldap_dn: String,
     pub created: NaiveDateTime,
 }   
@@ -31,7 +31,7 @@ pub struct Student {
 #[diesel(table_name = users)]
 pub struct SqlStudent {
     pub id: String,
-    pub student_number: String,
+    pub username: String,
     pub ldap_dn: String,
     pub created: NaiveDateTime,
 }
@@ -39,14 +39,14 @@ pub struct SqlStudent {
 #[derive(Debug, Serialize, Clone)]
 pub struct PublicStudent {
     pub id: String,
-    pub student_number: String,
+    pub username: String,
 }
 
 impl From<SqlStudent> for Student {
     fn from(sql_student: SqlStudent) -> Self {
         Self {
             id: sql_student.id,
-            student_number: sql_student.student_number.parse().unwrap(),
+            username: sql_student.username.parse().unwrap(),
             ldap_dn: sql_student.ldap_dn,
             created: sql_student.created,
         }
@@ -57,7 +57,7 @@ impl From<Student> for PublicStudent {
     fn from(user: Student) -> Self {
         Self { 
             id: user.id, 
-            student_number: user.student_number.to_string(), 
+            username: user.username.to_string(), 
         }
     }
 }
@@ -66,7 +66,7 @@ impl From<LdapStudent> for NewStudent {
     fn from(new_student: LdapStudent) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
-            student_number: new_student.student_number,
+            username: new_student.username,
             ldap_dn: new_student.ldap_dn,
             created: Local::now().naive_utc(),
         }
@@ -77,7 +77,7 @@ impl From<NewStudent> for SqlStudent {
     fn from(new_student: NewStudent) -> Self {
         Self {
             id: new_student.id,
-            student_number: new_student.student_number.to_string(),
+            username: new_student.username.to_string(),
             ldap_dn: new_student.ldap_dn,
             created: new_student.created,
         }
