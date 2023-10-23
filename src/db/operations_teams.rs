@@ -1,7 +1,7 @@
 use diesel::result::Error;
 use diesel::{prelude::*, insert_into};
 use crate::db::schema::teams::dsl::*;
-use crate::models::student::Student;
+use crate::models::user::User;
 use crate::models::team::{SqlTeam, Team, NewTeam};
 use super::operations_db::establish_connection;
 
@@ -15,7 +15,7 @@ pub fn create_team(team: NewTeam) ->  Result<Team, Error> {
     Ok(Team::from(new_team))
 }
 
-pub fn join_team(team: Team, user: Student) -> Result<(), Error> {
+pub fn join_team(team: Team, user: User) -> Result<(), Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     diesel::update(teams.filter(id.eq(team.id.clone())))
         .set(partner.eq(user.id))
@@ -33,7 +33,7 @@ pub fn get_team_by_id(uid: String) -> Result<Team, Error> {
     }
 }
 
-pub fn get_team_by_student(user: Student) -> Result<Team, Error> {
+pub fn get_team_by_student(user: User) -> Result<Team, Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     match teams
         .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
@@ -43,18 +43,7 @@ pub fn get_team_by_student(user: Student) -> Result<Team, Error> {
     }
 }
 
-// pub fn get_team_by_competition(user: Student) -> Result<Team, Error> {
-//     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
-//     match teams
-//         .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
-//         .first::<SqlTeam>(&mut conn) {
-//             Ok(t) => Ok(Team::from(t)),
-//             Err(e) => Err(e)
-//     }
-// }
-
-
-pub fn leave_team(team: Team, user: Student) -> Result<(), Error> {
+pub fn leave_team(team: Team, user: User) -> Result<(), Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     diesel::update(teams.filter(
             id.eq(team.id).and(partner.eq(user.id))
@@ -65,7 +54,7 @@ pub fn leave_team(team: Team, user: Student) -> Result<(), Error> {
 }
 
 
-pub fn disband_team(team: Team, user: Student) -> Result<(), Error> {
+pub fn disband_team(team: Team, user: User) -> Result<(), Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     diesel::delete(teams.filter(
             id.eq(team.id).and(owner.eq(user.id))
@@ -74,7 +63,7 @@ pub fn disband_team(team: Team, user: Student) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn in_member_of_a_team(user: Student) -> bool {
+pub fn in_member_of_a_team(user: User) -> bool {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     match teams
         .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))

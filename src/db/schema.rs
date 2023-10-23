@@ -89,6 +89,8 @@ diesel::table! {
         username -> Varchar,
         #[max_length = 255]
         ldap_dn -> Varchar,
+        #[max_length = 255]
+        role -> Varchar,
         created -> Datetime,
     }
 }

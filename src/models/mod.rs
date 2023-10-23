@@ -1,3 +1,3 @@
-pub mod student;
+pub mod user;
 pub mod team;
 pub mod competition;

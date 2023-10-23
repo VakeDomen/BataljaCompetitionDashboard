@@ -2,6 +2,7 @@ CREATE TABLE users (
     id              VARCHAR(255) NOT NULL PRIMARY KEY,
     username        VARCHAR(255) NOT NULL,
     ldap_dn         VARCHAR(255) NOT NULL,
+    role            VARCHAR(255) NOT NULL,
     created         DATETIME NOT NULL
 );
 
