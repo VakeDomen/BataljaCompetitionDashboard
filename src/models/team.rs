@@ -1,16 +1,13 @@
 use diesel::prelude::{Insertable, Queryable};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use chrono::{NaiveDateTime, Local};
 use uuid::Uuid;
 use crate::db::schema::teams::{self};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct NewTeam {
-    owner: String,
-    partner: String,
-    competition_id: String,
-    bot1: String,
-    bot2: String,
+    pub owner: String,
+    pub competition_id: String,
 }
 
 #[derive(Debug)]
@@ -80,10 +77,10 @@ impl From<NewTeam> for SqlTeam {
         Self {
             id: Uuid::new_v4().to_string(),
             owner: new_team.owner,
-            partner: new_team.partner,
+            partner: "".to_string(),
             competition_id: new_team.competition_id,
-            bot1: new_team.bot1,
-            bot2: new_team.bot2,
+            bot1: "".to_string(),
+            bot2: "".to_string(),
             created: Local::now().naive_utc(),
         }
     }

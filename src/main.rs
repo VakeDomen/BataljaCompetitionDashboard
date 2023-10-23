@@ -6,7 +6,11 @@ use actix_web_httpauth::extractors::bearer::Config;
 use dotenv::dotenv;
 use actix_web::{App, web, http, middleware::Logger};
 
-use crate::routes::{login::login, competition_create::competition_create};
+use crate::routes::{
+    login::login, 
+    competition_create::competition_create, 
+    team_create::team_create
+};
 
 mod routes;
 mod controllers;
@@ -41,6 +45,7 @@ async fn main() -> std::io::Result<()>  {
                 web::scope("/api")
                 .service(login)
                 .service(competition_create)
+                .service(team_create)
             )
             
     });
