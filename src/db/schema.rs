@@ -7,7 +7,9 @@ diesel::table! {
         #[max_length = 255]
         team_id -> Varchar,
         #[max_length = 255]
-        version -> Varchar,
+        bot_name -> Varchar,
+        #[max_length = 255]
+        source_path -> Varchar,
         created -> Datetime,
     }
 }

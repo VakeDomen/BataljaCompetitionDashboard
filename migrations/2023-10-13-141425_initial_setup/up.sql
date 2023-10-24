@@ -50,6 +50,7 @@ CREATE TABLE games_2v2 (
 CREATE TABLE bots (
     id              VARCHAR(255) NOT NULL PRIMARY KEY,
     team_id         VARCHAR(255) NOT NULL,
-    version         VARCHAR(255) NOT NULL,
+    bot_name        VARCHAR(255) NOT NULL,
+    source_path     VARCHAR(255) NOT NULL,
     created         DATETIME NOT NULL
 );
