@@ -9,7 +9,8 @@ use actix_web::{App, web, http, middleware::Logger};
 use crate::routes::{
     login::login, 
     competition_create::competition_create, 
-    team_create::team_create
+    team_create::team_create, 
+    team_join::team_join
 };
 
 mod routes;
@@ -46,6 +47,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(login)
                 .service(competition_create)
                 .service(team_create)
+                .service(team_join)
             )
             
     });

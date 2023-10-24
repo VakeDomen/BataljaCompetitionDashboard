@@ -54,6 +54,16 @@ pub fn leave_team(team: Team, user: User) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn kick_partner(team: Team, user: User) -> Result<(), Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    diesel::update(teams.filter(
+            id.eq(team.id).and(owner.eq(user.id))
+        ))
+        .set(partner.eq(""))
+        .execute(&mut conn)?;
+    Ok(())
+}
+
 
 pub fn disband_team(team: Team, user: User) -> Result<(), Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
