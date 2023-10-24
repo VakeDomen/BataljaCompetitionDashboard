@@ -1,13 +1,14 @@
 use std::{path::Path, fs};
-use actix_multipart::form::{tempfile::TempFile, MultipartForm};
+use actix_multipart::form::{tempfile::TempFile, MultipartForm, text::Text};
 use actix_web::{HttpResponse, post};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{Local, Timelike, Datelike};
-use crate::controllers::jwt::exchange_token_for_user;
+use crate::{controllers::jwt::exchange_token_for_user, models::bot::{NewBot, PublicBot}, db::{operations_teams::get_team_by_id, operations_bot::insert_bot}};
 
 #[derive(MultipartForm)]
 pub struct BotUploadData {
-    file: Option<TempFile>
+    team_id: Text<String>,
+    file: Option<TempFile>,
 }
 
 #[post("/file/upload")]
@@ -16,17 +17,30 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
         Some(u) => u,
         None => return HttpResponse::Unauthorized().finish()
     };
-
     let bot_file_data = payload.into_inner();
+
+
+    // get the uploader's alleged team
+    let team = match get_team_by_id(bot_file_data.team_id.0) {
+        Ok(t) => t,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+
+    // is uploader part of the team
+    if team.owner != requesting_user.id && team.partner != requesting_user.id {
+        return HttpResponse::Forbidden().finish();
+    }
+
+    // zip correctly uploaded?
     let bot_file = match bot_file_data.file {
         Some(f) => f,
         None => return HttpResponse::BadRequest().finish(),
     };
 
-
+    
     let filename = match &bot_file.file_name {
         Some(name) => name.to_string(),
-        None => "uploaded.zip".to_string(), // Default name if filename is not provided
+        None => "EpicBot.zip".to_string(), // Default name if filename is not provided
     };
 
 
@@ -47,8 +61,18 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
 
     let save_path = save_directory.join(filename);
     
+    let bot = NewBot { 
+        team_id: team.id,
+        source_path: save_path.to_string_lossy().to_string(), 
+    };
+
+    let bot = match insert_bot(bot) {
+        Ok(b) => b,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+
     match bot_file.file.persist(save_path) {
-        Ok(_) => HttpResponse::Ok().body("File uploaded successfully!"),
+        Ok(_) => HttpResponse::Ok().json(PublicBot::from(bot)),
         Err(_) => HttpResponse::InternalServerError().body("Failed to save file"),
     }
 }
