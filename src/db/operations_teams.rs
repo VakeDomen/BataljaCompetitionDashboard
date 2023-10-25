@@ -44,6 +44,16 @@ pub fn get_team_by_student_for_competition(user: User, comp_id: String) -> Resul
     }
 }
 
+pub fn get_team_by_student(user: User) -> Result<Vec<Team>, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    match teams
+        .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
+        .load::<SqlTeam>(&mut conn) {
+            Ok(t) => Ok(t.into_iter().map(Team::from).collect::<Vec<Team>>()),
+            Err(e) => Err(e)
+    }
+}
+
 pub fn leave_team(team: Team, user: User) -> Result<(), Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     diesel::update(teams.filter(
