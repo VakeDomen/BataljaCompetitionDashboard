@@ -13,7 +13,8 @@ use crate::routes::{
     team_join::team_join, 
     team_leave::team_leave, 
     team_kick::team_kick, 
-    bot_upload::bot_upload, competition_running::competition_running
+    bot_upload::bot_upload, competition_running::competition_running, 
+    me::me,
 };
 
 mod routes;
@@ -47,6 +48,7 @@ async fn main() -> std::io::Result<()>  {
             .app_data(Config::default())
             .service(
                 web::scope("/api")
+                .service(me)
                 .service(login)
                 .service(competition_create)
                 .service(team_create)

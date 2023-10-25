@@ -1,3 +1,4 @@
+pub mod me;
 pub mod login;
 pub mod competition_create;
 pub mod competition_running;
