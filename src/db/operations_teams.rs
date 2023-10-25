@@ -2,7 +2,7 @@ use diesel::result::Error;
 use diesel::{prelude::*, insert_into};
 use crate::db::schema::teams::dsl::*;
 use crate::models::user::User;
-use crate::models::team::{SqlTeam, Team, NewTeam};
+use crate::models::team::{SqlTeam, Team, NewTeam, BotSelector};
 use super::operations_db::establish_connection;
 
 
@@ -74,7 +74,7 @@ pub fn disband_team(team: Team, user: User) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn in_member_of_a_team(user: User) -> bool {
+pub fn is_member_of_a_team(user: User) -> bool {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     match teams
         .filter(owner.eq(user.id.clone()).or(partner.eq(user.id.clone())))
@@ -84,7 +84,7 @@ pub fn in_member_of_a_team(user: User) -> bool {
     }
 }
 
-pub fn in_member_of_a_team_on_competition(user: User, comp_id: String) -> bool {
+pub fn is_member_of_a_team_on_competition(user: User, comp_id: String) -> bool {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     match teams
         .filter(competition_id.eq(comp_id))
@@ -95,3 +95,12 @@ pub fn in_member_of_a_team_on_competition(user: User, comp_id: String) -> bool {
     }
 }
 
+pub fn set_team_bot(team: Team, bot: BotSelector, bot_id: String) -> Result<(), Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    let builder = diesel::update(teams.filter(id.eq(team.id)));
+    match bot {
+        BotSelector::First => builder.set(bot1.eq(bot_id)).execute(&mut conn)?,
+        BotSelector::Second => builder.set(bot2.eq(bot_id)).execute(&mut conn)?,
+    };
+    Ok(())
+}

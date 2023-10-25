@@ -24,6 +24,17 @@ pub fn get_bot_by_id(uid: String) -> Result<Bot, Error> {
     }
 }
 
+pub fn get_bot_by_id_and_team(bot_id: String, tid: String) -> Result<Bot, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    match bots
+        .filter(id.eq(bot_id).and(team_id.eq(tid)))
+        .first::<SqlBot>(&mut conn) {
+            Ok(u) => Ok(Bot::from(u)),
+            Err(e) => Err(e)
+    }
+}
+
+
 
 pub fn get_bots_by_ids(ids: Vec<String>) -> Result<Vec<Bot>, Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");

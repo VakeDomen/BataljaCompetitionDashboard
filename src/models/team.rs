@@ -5,8 +5,14 @@ use uuid::Uuid;
 use crate::db::schema::teams::{self};
 
 #[derive(Debug, Deserialize)]
+pub enum BotSelector {
+    First,
+    Second
+}
+
+#[derive(Debug, Deserialize)]
 pub struct NewTeam {
-    pub owner: String,
+    pub owner: String,  
     pub competition_id: String,
 }
 
