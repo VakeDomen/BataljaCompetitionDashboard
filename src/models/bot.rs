@@ -36,7 +36,6 @@ pub struct PublicBot {
     pub id: String,
     pub team_id: String,
     pub bot_name: String,
-    pub source_path: String,
     pub created: NaiveDateTime,
 }
 
@@ -58,7 +57,6 @@ impl From<Bot> for PublicBot {
             id: bot.id,
             team_id: bot.team_id,
             bot_name: bot.bot_name,
-            source_path: bot.source_path,
             created: bot.created,
         }
     }

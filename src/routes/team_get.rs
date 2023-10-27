@@ -1,6 +1,10 @@
 use actix_web::{HttpResponse, get};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use crate::{controllers::jwt::exchange_token_for_user, models::{user::PublicUser, team::PublicTeam}, db::operations_teams::{get_team_by_student_for_competition, get_team_by_student}};
+use crate::{
+    controllers::jwt::exchange_token_for_user, 
+    models::team::PublicTeam, 
+    db::operations_teams::get_team_by_student,
+};
 
 #[get("/team")]
 pub async fn team_get(auth: BearerAuth) -> HttpResponse {

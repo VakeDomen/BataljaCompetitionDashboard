@@ -35,6 +35,17 @@ pub fn get_bot_by_id_and_team(bot_id: String, tid: String) -> Result<Bot, Error>
 }
 
 
+pub fn get_bots_by_team(tid: String) -> Result<Vec<Bot>, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    match bots
+        .filter(team_id.eq(tid))
+        .load::<SqlBot>(&mut conn) {
+            Ok(u) => Ok(u.into_iter().map(Bot::from).collect::<Vec<Bot>>()),
+            Err(e) => Err(e)
+    }
+}
+
+
 
 pub fn get_bots_by_ids(ids: Vec<String>) -> Result<Vec<Bot>, Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
