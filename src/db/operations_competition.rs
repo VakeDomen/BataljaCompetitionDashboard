@@ -2,7 +2,7 @@ use chrono::Local;
 use diesel::result::Error;
 use diesel::{prelude::*, insert_into};
 use crate::db::schema::competitions::dsl::*;
-use crate::models::competition::{SqlCompetition, Competition, NewCompetition, self};
+use crate::models::competition::{SqlCompetition, Competition, NewCompetition};
 use super::operations_db::establish_connection;
 
 
