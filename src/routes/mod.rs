@@ -1,4 +1,4 @@
-pub mod me;
+pub mod user_me;
 pub mod login;
 pub mod competition_id;
 pub mod competition_create;
@@ -13,3 +13,4 @@ pub mod team_get;
 pub mod team_bots;
 pub mod team_bot_change;
 pub mod bot_upload;
+pub mod user_id;
