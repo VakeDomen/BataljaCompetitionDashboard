@@ -21,7 +21,7 @@ use crate::routes::{
     competition_attended::competition_attended,
     competition_id::competition_id, 
     user_id::user_id, 
-    team_disband::team_disband,
+    team_disband::team_disband, team_bot_change::team_bot_change,
 };
 
 mod routes;
@@ -65,6 +65,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(team_leave)
                 .service(team_kick)
                 .service(team_bots)
+                .service(team_bot_change)
                 .service(team_get)
                 .service(bot_upload)
                 .service(competition_running)
