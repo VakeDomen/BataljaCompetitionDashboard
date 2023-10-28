@@ -1,7 +1,7 @@
 use actix_web::{HttpResponse, get};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use crate::controllers::jwt::exchange_token_for_user;
-use crate::db::operations_competition::{get_running_competitions, get_competitions_by_ids};
+use crate::db::operations_competition::get_competitions_by_ids;
 use crate::db::operations_teams::get_team_by_student;
 use crate::models::competition::PublicCompetition;
 
