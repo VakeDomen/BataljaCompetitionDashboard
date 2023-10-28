@@ -11,7 +11,7 @@ pub struct BotUploadData {
     file: Option<TempFile>,
 }
 
-#[post("/file/upload")]
+#[post("/bot/upload")]
 pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>) -> HttpResponse {
     let requesting_user = match exchange_token_for_user(auth) {
         Some(u) => u,
