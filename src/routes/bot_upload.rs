@@ -3,7 +3,7 @@ use actix_multipart::form::{tempfile::TempFile, MultipartForm, text::Text};
 use actix_web::{HttpResponse, post};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{Local, Timelike, Datelike};
-use crate::{controllers::jwt::exchange_token_for_user, models::bot::{NewBot, PublicBot}, db::{operations_teams::get_team_by_id, operations_bot::insert_bot}};
+use crate::{controllers::jwt::exchange_token_for_user, models::{bot::{NewBot, PublicBot}, team::BotSelector}, db::{operations_teams::{get_team_by_id, set_team_bot}, operations_bot::insert_bot}};
 
 #[derive(MultipartForm)]
 pub struct BotUploadData {
@@ -62,7 +62,7 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
     let save_path = save_directory.join(filename);
     
     let bot = NewBot { 
-        team_id: team.id,
+        team_id: team.id.clone(),
         source_path: save_path.to_string_lossy().to_string(), 
     };
 
@@ -70,6 +70,18 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
         Ok(b) => b,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
+
+    if team.bot1.eq("") {
+        if let Err(_) = set_team_bot(&team, BotSelector::First, bot.id.clone()) {
+            return HttpResponse::InternalServerError().finish();
+        } 
+    }
+
+    if team.bot2.eq("") {
+        if let Err(_) = set_team_bot(&team, BotSelector::Second, bot.id.clone()) {
+            return HttpResponse::InternalServerError().finish();
+        } 
+    }
 
     match bot_file.file.persist(save_path) {
         Ok(_) => HttpResponse::Ok().json(PublicBot::from(bot)),

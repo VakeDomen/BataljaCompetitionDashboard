@@ -35,7 +35,7 @@ pub async fn team_bot_change(auth: BearerAuth, body: web::Json<ChangeBotData>) -
         Err(_) => return HttpResponse::Forbidden().finish(),
     };
 
-    match set_team_bot(team, change_bot_data.bot, bot.id) {
+    match set_team_bot(&team, change_bot_data.bot, bot.id) {
         Ok(_) =>  HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
