@@ -54,7 +54,9 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
         now.minute(), 
         now.second()
     );
-    let save_directory = Path::new("./resources/uploads").join(time);
+    let save_directory = Path::new("./resources/uploads")
+        .join(team.competition_id.clone())
+        .join(time);
     if let Err(_) = fs::create_dir_all(&save_directory) {
         return HttpResponse::InternalServerError().body("Failed to create directory");
     }
