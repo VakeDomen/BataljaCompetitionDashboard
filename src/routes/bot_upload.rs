@@ -3,6 +3,7 @@ use actix_multipart::form::{tempfile::TempFile, MultipartForm, text::Text};
 use actix_web::{HttpResponse, post};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{Local, Timelike, Datelike};
+use zip::ZipArchive;
 use crate::{controllers::jwt::exchange_token_for_user, models::{bot::{NewBot, PublicBot}, team::BotSelector}, db::{operations_teams::{get_team_by_id, set_team_bot}, operations_bot::insert_bot}};
 
 #[derive(MultipartForm)]
@@ -37,6 +38,11 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
         None => return HttpResponse::BadRequest().finish(),
     };
 
+    // is it a zip?
+    if ZipArchive::new(&bot_file.file).is_err() {
+        return HttpResponse::BadRequest().body("Uploaded file is not a valid ZIP file");
+    }
+
     
     let filename = match &bot_file.file_name {
         Some(name) => name.to_string(),
@@ -57,6 +63,7 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
     let save_directory = Path::new("./resources/uploads")
         .join(team.competition_id.clone())
         .join(time);
+
     if let Err(_) = fs::create_dir_all(&save_directory) {
         return HttpResponse::InternalServerError().body("Failed to create directory");
     }

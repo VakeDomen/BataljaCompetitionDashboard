@@ -25,3 +25,4 @@ serde_json = "1.0.107"
 tokio = "1.33.0"
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] } # date
+zip = "0.5"
