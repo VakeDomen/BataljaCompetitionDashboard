@@ -50,3 +50,11 @@ pub fn get_running_competitions() -> Result<Vec<Competition>, Error> {
         .collect();
     Ok(converted_competitions)
 }
+
+pub fn set_competition_round(cid: String, new_round: i32) -> Result<(), Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    diesel::update(competitions.filter(id.eq(cid)))
+        .set(round.eq(new_round.to_string()))
+        .execute(&mut conn)?;
+    Ok(())
+}

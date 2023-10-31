@@ -4,7 +4,7 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIter
 
 use crate::{
     db::{
-        operations_competition::get_competition_by_id, 
+        operations_competition::{get_competition_by_id, set_competition_round}, 
         operations_teams::get_teams_by_competition_id, 
         operations_bot::{get_bot_by_id, set_bot_error}, operations_game2v2::insert_game,
     }, 
@@ -45,6 +45,12 @@ pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchM
     // Cleanup: Remove the match directory
     cleanup_matches()?;
     
+    // increment competition round
+    let new_round = competition.round + 1;
+    if let Err(e) = set_competition_round(competition.id.clone(), new_round) {
+        return Err(MatchMakerError::DatabaseError(e))
+    }  
+
     Ok(match_pairs)
 }
 
@@ -164,10 +170,54 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     parse_game(lines, match_game)
 }
 
-fn parse_game(lines: Vec<String>, match_game: NewGame2v2) -> Result<Game2v2, MatchMakerError> {
+fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2, MatchMakerError> {
+    let mut r_red = 0;
+    let mut r_blue = 0;
+    let mut r_green = 0;
+    let mut r_yellow = 0;
+
     for line in lines.into_iter() {
-        if line.contains("L") {
-            println!("Line: {}", line);
+        if line.contains("R ") {
+            let parts: Vec<&str> = line.split(" ").collect();
+            if parts.len() == 3 {
+                match parts[2] {
+                    "red"       => r_red    = parts[1].parse().unwrap_or(0),
+                    "blue"      => r_blue   = parts[1].parse().unwrap_or(0),
+                    "green"     => r_green  = parts[1].parse().unwrap_or(0),
+                    "yellow"    => r_yellow = parts[1].parse().unwrap_or(0),
+                    _ => ()
+                }
+            }
+        }
+    }
+
+    match_game.team1bot1_survived = r_red > 0;
+    match_game.team1bot2_survived = r_blue > 0;
+    match_game.team2bot1_survived = r_green > 0;
+    match_game.team2bot2_survived = r_yellow > 0;
+
+    match (
+        &match_game.team1bot1_survived,
+        &match_game.team1bot2_survived,
+        &match_game.team2bot1_survived,
+        &match_game.team2bot2_survived
+    ) {
+        (true,  true,  false, false) => match_game.winner_id = match_game.team1_id.clone(),
+        (true,  false, false, false) => match_game.winner_id = match_game.team1_id.clone(),
+        (false, true,  false, false) => match_game.winner_id = match_game.team1_id.clone(),
+        (false, false, true,  true)  => match_game.winner_id = match_game.team2_id.clone(),
+        (false, false, true,  false) => match_game.winner_id = match_game.team2_id.clone(),
+        (false, false, false, true)  => match_game.winner_id = match_game.team2_id.clone(),
+        (_, _, _, _) => match_game.winner_id = "".to_string(),
+    }
+
+    if match_game.winner_id.eq("") {
+        let t1_score = r_red + r_blue;
+        let t2_score = r_green + r_yellow;
+        if t1_score > t2_score {
+            match_game.winner_id = match_game.team1_id.clone();
+        } else {
+            match_game.winner_id = match_game.team2_id.clone();
         }
     }
 
