@@ -45,6 +45,13 @@ pub fn get_bots_by_team(tid: String) -> Result<Vec<Bot>, Error> {
     }
 }
 
+pub fn set_bot_error(bot: Bot, error: String) -> Result<(), Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    diesel::update(bots.filter(id.eq(bot.id)))
+        .set(compile_error.eq(error))
+        .execute(&mut conn)?;
+    Ok(())
+}
 
 
 pub fn get_bots_by_ids(ids: Vec<String>) -> Result<Vec<Bot>, Error> {

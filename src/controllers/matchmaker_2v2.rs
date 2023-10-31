@@ -1,18 +1,23 @@
-use std::{path::Path, fs};
+use std::{path::Path, fs, process::Command};
 use rand::Rng;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 
 use crate::{
     db::{
         operations_competition::get_competition_by_id, 
         operations_teams::get_teams_by_competition_id, 
-        operations_bot::get_bot_by_id,
+        operations_bot::{get_bot_by_id, set_bot_error},
     }, 
     models::{
         team::Team, 
-        errors::MatchMakerError, bot::Bot
-    }};
+        errors::MatchMakerError, 
+        bot::Bot, 
+        game_2v2::NewGame2v2, 
+        competition::Competition
+    }
+};
 
-use super::command_executor::execute_command;
+use super::command_executor::{execute_command, recursive_copy};
 
 pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchMakerError> {
     let competition = match get_competition_by_id(competition_id) {
@@ -26,48 +31,163 @@ pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchM
     };
 
     let compiled_teams = compile_team_bots(teams);
-
     let match_pairs = create_match_pairs(competition.games_per_round, compiled_teams);
 
-    for match_pair in match_pairs.iter() {
-        let out = run_match(&match_pair.0, &match_pair.1)?;
-        println!("{:#?}", out);
-    }
-
+    match_pairs.par_iter().for_each(|match_pair| {
+        let result = run_match(&competition, &match_pair.0, &match_pair.1);
+        
+        match result {
+            Ok(out) => println!("{:#?}", out),
+            Err(e) => eprintln!("Error: {}", e), // Handle the error here or log it
+        }
+    });
+  
     
     Ok(match_pairs)
 }
 
-fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
-    let mut compiled_teams: Vec<Team> = vec![];
 
-    for team in teams.into_iter() {
-        if team.bot1.eq("") || team.bot2.eq("") {
-            continue
-        }
+/// Runs a game match between two teams in a given competition.
+///
+/// This function handles the entire lifecycle of a match:
+/// 1. Setting up a new game.
+/// 2. Creating a unique directory for the match.
+/// 3. Copying the bots of both teams to the match directory.
+/// 4. Executing the game using the Evaluator JAR.
+/// 5. Saving the game output to a file and returning it.
+///
+/// # Arguments
+///
+/// * `competition` - A reference to the competition the teams are participating in.
+/// * `team1` - The first team participating in the match.
+/// * `team2` - The second team participating in the match.
+///
+/// # Returns
+///
+/// A `Result` containing a `Vec<String>` of the game's output lines if successful, or a `MatchMakerError` if there's an error.
+fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Vec<String>, MatchMakerError> {
+    // Initialize a new 2v2 game with details from the provided teams and competition
+    let match_game = NewGame2v2::new(
+        competition.id.clone(),
+        competition.round.to_string(),
+        team1.id.clone(),
+        team2.id.clone(),
+        team1.bot1.clone(),
+        team1.bot2.clone(),
+        team2.bot1.clone(),
+        team2.bot2.clone(),
+    );
+
+    // Create a directory to store match-related files
+    let match_folder = Path::new("./resources/matches").join(match_game.id.to_string());
+    if let Err(e) = fs::create_dir_all(&match_folder) {
+        return Err(MatchMakerError::IOError(e));
+    }
+
+    // Copy each bot from the work directory to the match directory
+    let bots = vec![&team1.bot1, &team1.bot2, &team2.bot1, &team2.bot2];
+    for bot_id in &bots {
+        let source = Path::new("./resources/workdir/bots").join(bot_id);
+        let destination = match_folder.join(bot_id);
         
+        if let Err(e) = recursive_copy(&source, &destination) {
+            return Err(MatchMakerError::IOError(e));
+        }
+    }
+
+    // Execute the game using the Evaluator JAR and collect the paths of each bot
+    let mut bot_paths: Vec<String> = bots.iter().map(|bot_id| match_folder.join(bot_id).to_string_lossy().to_string()).collect();
+    let output_file = format!("./resources/games/{}.txt", match_game.id.to_string());
+    let mut command_args = vec![
+        "-jar".to_string(),
+        "resources/gamefiles/Evaluator.jar".to_string(),
+    ];
+    command_args.append(&mut bot_paths);
+
+    // Run the game command and capture its output
+    let result = Command::new("java")
+        .args(&command_args)
+        .output()
+        .map_err(|e| MatchMakerError::IOError(e))?;
+
+    // Save the game's output to the specified file
+    if let Err(e) = fs::write(&output_file, result.stdout.clone()) {
+        return Err(MatchMakerError::IOError(e))
+    }
+
+    // Convert the game's output into a vector of strings and return it
+    let lines: Vec<String> = String::from_utf8_lossy(&result.stdout).lines().map(String::from).collect();
+    Ok(lines)
+}
+
+
+
+/// Attempts to compile the bots associated with each team in parallel.
+///
+/// This function performs the following steps for each team:
+/// 1. If a team doesn't have both bot1 and bot2, the team is skipped.
+/// 2. Retrieves the details of bot1 and bot2. If there's an error fetching the details, the team is skipped.
+/// 3. Tries to compile bot1 and bot2. If there's a compilation error, an error is set for the respective bot.
+/// 4. Teams with successful bot compilations are collected and returned.
+///
+/// # Arguments
+///
+/// * `teams` - A vector of `Team` objects for which bots need to be compiled.
+///
+/// # Returns
+///
+/// * A vector of `Team` objects for which both bots were successfully compiled.
+///
+/// # Notes
+///
+/// This function uses parallel processing for improved performance. Each team's bots are compiled in a separate thread.
+///
+fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
+    // Parallel processing of each team to compile associated bots
+    let results: Vec<Result<Team, MatchMakerError>> = teams.into_par_iter().filter_map(|team| {
+        // Skip teams without both bot1 and bot2
+        if team.bot1.eq("") || team.bot2.eq("") {
+            return None
+        }
+
+        // Retrieve bot details
         let bot1 = match get_bot_by_id(team.bot1.clone()) {
             Ok(b) => b,
-            Err(_) => continue,
+            Err(e) => return Some(Err(MatchMakerError::DatabaseError(e))),
         };
 
         let bot2 = match get_bot_by_id(team.bot2.clone()) {
             Ok(b) => b,
-            Err(_) => continue,
+            Err(e) => return Some(Err(MatchMakerError::DatabaseError(e))),
         };
         
-        if let Err(e) = compile_bot(bot1) {
-            println!("ERRRR: {:#?}", e);
-            continue
+        // Attempt to compile bot1
+        if let Err(e) = compile_bot(&bot1) {
+            if let Err(e) = set_bot_error(bot1, e.to_string()) {
+                return Some(Err(MatchMakerError::DatabaseError(e)));
+            }
+            return Some(Err(e))
         }
 
-        if let Err(e) = compile_bot(bot2) {
-            println!("ERRRR: {:#?}", e);
-            continue
+        // Attempt to compile bot2
+        if let Err(e) = compile_bot(&bot2) {
+            if let Err(e) = set_bot_error(bot2, e.to_string()) {
+                return Some(Err(MatchMakerError::DatabaseError(e)));
+            }
+            return Some(Err(e))
         }
 
-        compiled_teams.push(team);
-    }
+        // Return the team if both bots compiled successfully
+        Some(Ok(team))
+    }).collect();
+
+    // Extract teams with successful bot compilations
+    let compiled_teams: Vec<Team> = results.into_iter().filter_map(|res| {
+        match res {
+            Ok(team) => Some(team),
+            Err(_) => None,
+        }
+    }).collect();
 
     compiled_teams
 }
@@ -99,7 +219,7 @@ fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
 /// * No Java files are found in the unzipped directory.
 /// * The Java files cannot be compiled.
 /// 
-fn compile_bot(bot: Bot) -> Result<(), MatchMakerError> {
+fn compile_bot(bot: &Bot) -> Result<(), MatchMakerError> {
     let workdir = Path::new("./resources/workdir/bots").join(bot.id.clone());
     let source_path = Path::new(&bot.source_path);
 
@@ -181,16 +301,6 @@ fn compile_bot(bot: Bot) -> Result<(), MatchMakerError> {
 
     Ok(())
 }
-
-
-fn run_match(team1: &Team, team2: &Team) -> Result<Vec<String>, MatchMakerError> {
-    match execute_command("ls".to_string(), vec![]) {
-        Ok(out) => Ok(out),
-        Err(e) => Err(MatchMakerError::IOError(e))
-    }
-}
-
-
 
 /// Creates match pairs for a set of teams.
 ///

@@ -1,4 +1,6 @@
+use std::fs;
 use std::io::{Error, ErrorKind, BufReader, BufRead};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 pub fn execute_command(command: String, args: Vec<&str>) -> Result<Vec<String>, Error> {
@@ -27,4 +29,20 @@ pub fn execute_command(command: String, args: Vec<&str>) -> Result<Vec<String>, 
         .for_each(|line| output_lines.push(line));
 
     Ok(output_lines)
+}
+
+pub fn recursive_copy(src: &Path, dest: &Path) -> std::io::Result<()> {
+    if !src.is_dir() {
+        fs::copy(src, dest)?;
+    } else {
+        fs::create_dir_all(dest)?;
+
+        for entry in fs::read_dir(src)? {
+            let entry = entry?;
+            let path = entry.path();
+            let dest_child = dest.join(path.file_name().unwrap());
+            recursive_copy(&path, &dest_child)?;
+        }
+    }
+    Ok(())
 }
