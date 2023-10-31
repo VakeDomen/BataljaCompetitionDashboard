@@ -48,6 +48,8 @@ diesel::table! {
         #[max_length = 255]
         team2_id -> Varchar,
         #[max_length = 255]
+        winner_id -> Varchar,
+        #[max_length = 255]
         team1bot1_id -> Varchar,
         #[max_length = 255]
         team1bot2_id -> Varchar,

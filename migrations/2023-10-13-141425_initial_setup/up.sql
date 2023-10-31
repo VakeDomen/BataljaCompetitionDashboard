@@ -34,6 +34,7 @@ CREATE TABLE games_2v2 (
     round                   VARCHAR(255) NOT NULL,
     team1_id                VARCHAR(255) NOT NULL,
     team2_id                VARCHAR(255) NOT NULL,
+    winner_id               VARCHAR(255) NOT NULL,
     team1bot1_id            VARCHAR(255) NOT NULL,
     team1bot2_id            VARCHAR(255) NOT NULL,
     team2bot1_id            VARCHAR(255) NOT NULL,
