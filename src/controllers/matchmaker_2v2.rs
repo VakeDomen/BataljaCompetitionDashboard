@@ -19,6 +19,36 @@ use crate::{
 
 use super::command_executor::{execute_command, recursive_copy};
 
+/// Runs a 2v2 round for a specified competition.
+///
+/// This function manages the execution of a single 2v2 round for a competition, which includes:
+/// 1. Fetching the competition details from the database.
+/// 2. Retrieving all the teams participating in the competition.
+/// 3. Compiling the bots for each team.
+/// 4. Creating match pairs for the round.
+/// 5. Running each match in parallel.
+/// 6. Cleaning up the match directory after all games have been executed.
+/// 7. Incrementing the competition round for the next set of matches.
+///
+/// # Arguments
+///
+/// * `competition_id` - A string representing the ID of the competition for which the round is to be run.
+///
+/// # Returns
+///
+/// A `Result` containing a `Vec` of tuples, where each tuple contains two teams that played against each other in the round. 
+/// If successful, or a `MatchMakerError` if there's an error.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The competition cannot be fetched from the database.
+/// - The teams for the specified competition cannot be retrieved.
+/// - There's an issue compiling the bots for any team.
+/// - There's an error running any of the matches.
+/// - The cleanup process fails.
+/// - There's a problem updating the competition's round in the database.
+///
 pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchMakerError> {
     let competition = match get_competition_by_id(competition_id) {
         Ok(c) => c,
