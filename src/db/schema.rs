@@ -10,6 +10,7 @@ diesel::table! {
         bot_name -> Varchar,
         #[max_length = 255]
         source_path -> Varchar,
+        compile_error -> Text,
         created -> Datetime,
     }
 }
@@ -29,6 +30,7 @@ diesel::table! {
         #[sql_name = "type"]
         #[max_length = 255]
         type_ -> Varchar,
+        games_per_round -> Integer,
         created -> Datetime,
     }
 }

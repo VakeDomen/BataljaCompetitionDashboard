@@ -14,6 +14,7 @@ CREATE TABLE competitions (
     allowed_submissions     VARCHAR(255) NOT NULL,
     round                   VARCHAR(255) NOT NULL,
     type                    VARCHAR(255) NOT NULL,
+    games_per_round         INTEGER NOT NULL,
     created                 DATETIME NOT NULL
 );
 
@@ -52,5 +53,6 @@ CREATE TABLE bots (
     team_id         VARCHAR(255) NOT NULL,
     bot_name        VARCHAR(255) NOT NULL,
     source_path     VARCHAR(255) NOT NULL,
+    compile_error   TEXT NOT NULL,
     created         DATETIME NOT NULL
 );

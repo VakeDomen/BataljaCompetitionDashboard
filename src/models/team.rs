@@ -16,7 +16,7 @@ pub struct NewTeam {
     pub competition_id: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Team {
     pub id: String,
     pub owner: String,

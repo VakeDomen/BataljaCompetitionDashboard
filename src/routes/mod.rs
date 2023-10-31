@@ -14,3 +14,5 @@ pub mod team_bots;
 pub mod team_bot_change;
 pub mod bot_upload;
 pub mod user_id;
+
+pub mod matchmaking_test;

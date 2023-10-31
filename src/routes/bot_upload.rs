@@ -24,7 +24,7 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
     // get the uploader's alleged team
     let team = match get_team_by_id(bot_file_data.team_id.0) {
         Ok(t) => t,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(_) => return HttpResponse::BadRequest().body("Team does not exist"),
     };
 
     // is uploader part of the team
@@ -35,7 +35,7 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
     // zip correctly uploaded?
     let bot_file = match bot_file_data.file {
         Some(f) => f,
-        None => return HttpResponse::BadRequest().finish(),
+        None => return HttpResponse::BadRequest().body("Can't extract zip file."),
     };
 
     // is it a zip?

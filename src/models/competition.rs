@@ -21,6 +21,7 @@ pub struct Competition {
     pub allowed_submissions: bool,
     pub round: i32,
     pub type_: String,
+    pub games_per_round: i32,
     pub created: NaiveDateTime,
 }   
 
@@ -34,6 +35,7 @@ pub struct SqlCompetition {
     pub allowed_submissions: String,
     pub round: String,
     pub type_: String,
+    pub games_per_round: i32,
     pub created: NaiveDateTime,
 }
 
@@ -59,6 +61,7 @@ impl From<SqlCompetition> for Competition {
             allowed_submissions: sql_competition.allowed_submissions.parse().unwrap(),
             round: sql_competition.round.parse().unwrap(),
             type_: sql_competition.type_,
+            games_per_round: sql_competition.games_per_round,
             created: sql_competition.created,
         }
     }
@@ -89,6 +92,7 @@ impl From<NewCompetition> for SqlCompetition {
             allowed_submissions: true.to_string(),
             round: 0.to_string(),
             type_: new_competition.type_,
+            games_per_round: 6,
             created: Local::now().naive_utc(),
         }
     }

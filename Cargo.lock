@@ -407,6 +407,7 @@ dependencies = [
  "once_cell",
  "r2d2",
  "r2d2-diesel",
+ "rand",
  "serde",
  "serde_json",
  "tokio",
