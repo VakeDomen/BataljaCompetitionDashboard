@@ -54,6 +54,18 @@ pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchM
     Ok(match_pairs)
 }
 
+/// Cleans up the matches directory by removing all sub-directories.
+///
+/// This function is designed to remove all game-related folders that were 
+/// created during individual matches within the `./resources/matches/` directory.
+/// It ensures the top-level `matches` directory remains intact while all its
+/// sub-directories (representing individual matches) are deleted.
+///
+/// # Returns
+///
+/// A `Result` which is `Ok(())` if the cleanup was successful, or a `MatchMakerError` 
+/// if there's an error during the cleanup process.
+///
 fn cleanup_matches() -> Result<(), MatchMakerError> {
     // Cleanup: Remove all sub-directories within the ./resources/matches/ directory
     let matches_path = Path::new("./resources/matches");
@@ -170,6 +182,26 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     parse_game(lines, match_game)
 }
 
+/// Parses game output to determine match results and constructs a `Game2v2` object.
+///
+/// This function processes the output lines from a game match to extract relevant information
+/// such as which bots survived and the scores of each bot. Based on this information, it 
+/// determines the winner of the match and constructs a `Game2v2` object that encapsulates 
+/// these details.
+///
+/// The function expects lines in the format `R <score> <color>` to determine scores of each bot. 
+/// Colors (`red`, `blue`, `green`, `yellow`) are associated with bots from both teams.
+///
+/// # Arguments
+///
+/// * `lines` - A vector of strings representing the game's output lines.
+/// * `match_game` - A mutable `NewGame2v2` object that contains initial game details and will be 
+///                  updated with the parsed results.
+///
+/// # Returns
+///
+/// A `Result` containing a `Game2v2` object if successful, or a `MatchMakerError` if there's an error.
+///
 fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2, MatchMakerError> {
     let mut r_red = 0;
     let mut r_blue = 0;
