@@ -1,4 +1,4 @@
-use std::{path::Path, fs, process::Command};
+use std::{path::Path, fs, process::{Command, Stdio}, os::unix::process::CommandExt};
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 
@@ -6,13 +6,13 @@ use crate::{
     db::{
         operations_competition::get_competition_by_id, 
         operations_teams::get_teams_by_competition_id, 
-        operations_bot::{get_bot_by_id, set_bot_error},
+        operations_bot::{get_bot_by_id, set_bot_error}, operations_game2v2::insert_game,
     }, 
     models::{
         team::Team, 
         errors::MatchMakerError, 
         bot::Bot, 
-        game_2v2::NewGame2v2, 
+        game_2v2::{NewGame2v2, Game2v2}, 
         competition::Competition
     }
 };
@@ -42,30 +42,55 @@ pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchM
         }
     });
   
+    // Cleanup: Remove the match directory
+    cleanup_matches()?;
     
     Ok(match_pairs)
+}
+
+fn cleanup_matches() -> Result<(), MatchMakerError> {
+    // Cleanup: Remove all sub-directories within the ./resources/matches/ directory
+    let matches_path = Path::new("./resources/matches");
+    if let Ok(entries) = fs::read_dir(matches_path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                if entry.path().is_dir() {
+                    if let Err(e) = fs::remove_dir_all(entry.path()) {
+                        return Err(MatchMakerError::IOError(e));
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 
 /// Runs a game match between two teams in a given competition.
 ///
-/// This function handles the entire lifecycle of a match:
-/// 1. Setting up a new game.
-/// 2. Creating a unique directory for the match.
+/// This function manages the preparation, execution, and cleanup of a game match between two teams.
+/// The steps include:
+/// 1. Initializing a new 2v2 game instance based on the teams and competition details.
+/// 2. Creating a unique directory for the match within the `./resources/matches` folder.
 /// 3. Copying the bots of both teams to the match directory.
-/// 4. Executing the game using the Evaluator JAR.
-/// 5. Saving the game output to a file and returning it.
+/// 4. Running the game using the Evaluator JAR, ensuring the game and its spawned bot processes 
+///    are grouped together for easy management.
+/// 5. Saving the game's output to a file within the `./resources/games` folder.
+/// 6. Cleaning up by terminating any lingering processes related to the game to prevent zombies.
+/// 7. Parsing the game output to produce a structured representation of the game results.
+/// 8. Cleaning up by removing the match directory created in step 2.
 ///
 /// # Arguments
 ///
-/// * `competition` - A reference to the competition the teams are participating in.
+/// * `competition` - A reference to the competition in which the teams are participating.
 /// * `team1` - The first team participating in the match.
 /// * `team2` - The second team participating in the match.
 ///
 /// # Returns
 ///
-/// A `Result` containing a `Vec<String>` of the game's output lines if successful, or a `MatchMakerError` if there's an error.
-fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Vec<String>, MatchMakerError> {
+/// A `Result` containing the structured game results (`Game2v2`) if successful. If there are any
+/// issues during the preparation, execution, or cleanup, a `MatchMakerError` will be returned.
+fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Game2v2, MatchMakerError> {
     // Initialize a new 2v2 game with details from the provided teams and competition
     let match_game = NewGame2v2::new(
         competition.id.clone(),
@@ -104,20 +129,52 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ve
     ];
     command_args.append(&mut bot_paths);
 
+
     // Run the game command and capture its output
     let result = Command::new("java")
         .args(&command_args)
-        .output()
+        .stdout(Stdio::piped())
+        .before_exec(|| {
+            // Set the spawned process into its own process group
+            unsafe {
+                libc::setpgid(0, 0);
+            }
+            Ok(())
+        })
+        .spawn()
         .map_err(|e| MatchMakerError::IOError(e))?;
 
+    let cid = result.id().clone();
+    let output = result.wait_with_output().map_err(|e| MatchMakerError::IOError(e))?;
+
+
+    // Ensure no zombies are left
+    let pgid = unsafe { libc::getpgid(cid as libc::pid_t) };
+    unsafe { libc::killpg(pgid, libc::SIGTERM) };
+
     // Save the game's output to the specified file
-    if let Err(e) = fs::write(&output_file, result.stdout.clone()) {
-        return Err(MatchMakerError::IOError(e))
+    if let Err(e) = fs::write(&output_file, &output.stdout) {
+        return Err(MatchMakerError::IOError(e));
     }
 
-    // Convert the game's output into a vector of strings and return it
-    let lines: Vec<String> = String::from_utf8_lossy(&result.stdout).lines().map(String::from).collect();
-    Ok(lines)
+    // Convert the game's output into a vector of strings
+    let lines: Vec<String> = String::from_utf8_lossy(&output.stdout).lines().map(String::from).collect();
+
+    // Parse the game using the provided function and return the result
+    parse_game(lines, match_game)
+}
+
+fn parse_game(lines: Vec<String>, match_game: NewGame2v2) -> Result<Game2v2, MatchMakerError> {
+    for line in lines.into_iter() {
+        if line.contains("L") {
+            println!("Line: {}", line);
+        }
+    }
+
+    match insert_game(match_game) {
+        Ok(g) => Ok(g),
+        Err(e) => Err(MatchMakerError::DatabaseError(e)),
+    }
 }
 
 

@@ -403,6 +403,7 @@ dependencies = [
  "env_logger",
  "jsonwebtoken",
  "ldap3",
+ "libc",
  "log",
  "once_cell",
  "r2d2",

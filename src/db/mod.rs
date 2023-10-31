@@ -4,3 +4,4 @@ pub mod operations_users;
 pub mod operations_teams;
 pub mod operations_competition;
 pub mod operations_bot;
+pub mod operations_game2v2;
