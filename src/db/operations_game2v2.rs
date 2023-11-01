@@ -13,3 +13,17 @@ pub fn insert_game(game: NewGame2v2) ->  Result<Game2v2, Error> {
         .execute(&mut conn)?;
     Ok(Game2v2::from(new_bot))
 }
+
+pub fn get_games_by_bot_id(bot_id: String) -> Result<Vec<Game2v2>, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    let games = games_2v2
+        .filter(
+            team1bot1_id.eq(bot_id.clone())
+                .or(team1bot2_id.eq(bot_id.clone()))
+                .or(team2bot1_id.eq(bot_id.clone()))
+                .or(team2bot2_id.eq(bot_id.clone()))    
+        )
+        .distinct()
+        .load::<SqlGame2v2>(&mut conn)?;
+    Ok(games.into_iter().map(Game2v2::from).collect::<Vec<Game2v2>>())
+}

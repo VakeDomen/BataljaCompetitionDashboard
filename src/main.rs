@@ -23,7 +23,10 @@ use crate::routes::{
     competition_attended::competition_attended,
     competition_id::competition_id, 
     user_id::user_id, 
-    team_disband::team_disband, team_bot_change::team_bot_change, matchmaking_test::mmt,
+    team_disband::team_disband, 
+    team_bot_change::team_bot_change, 
+    matchmaking_test::mmt, 
+    bot_win_rates::bots_win_rate,
 };
 
 mod routes;
@@ -74,6 +77,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(team_bot_change)
                 .service(team_get)
                 .service(bot_upload)
+                .service(bots_win_rate)
                 .service(competition_running)
                 .service(competition_attended)
                 .service(competition_id)
@@ -110,7 +114,7 @@ fn setup_env() -> (u16, Option<String>) {
 #[tokio::main]
 async fn run_cron() {
     let mut sched = JobScheduler::new();
-    match sched.add(Job::new_async("0 * * * * *", move |_, _|  Box::pin(async { 
+    match sched.add(Job::new_async("0 0 * * * * *", move |_, _|  Box::pin(async { 
         if let Err(e) = run_competitions_round() {
             println!("Error on running round: {:?}", e)
         }

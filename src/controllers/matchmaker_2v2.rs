@@ -65,11 +65,8 @@ pub fn run_2v2_round(competition_id: String) -> Result<(), MatchMakerError> {
     let match_pairs = create_match_pairs(competition.games_per_round, compiled_teams);
 
     match_pairs.par_iter().for_each(|match_pair| {
-        let result = run_match(&competition, &match_pair.0, &match_pair.1);
-        
-        match result {
-            Ok(out) => println!("{:#?}", out),
-            Err(e) => eprintln!("Error: {}", e), // Handle the error here or log it
+        if let Err(e) = run_match(&competition, &match_pair.0, &match_pair.1) {
+            eprintln!("Error: {}", e)
         }
     });
   
