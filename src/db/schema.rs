@@ -42,7 +42,7 @@ diesel::table! {
         #[max_length = 255]
         competition_id -> Varchar,
         #[max_length = 255]
-        round -> Varchar,
+        round -> Integer,
         #[max_length = 255]
         team1_id -> Varchar,
         #[max_length = 255]

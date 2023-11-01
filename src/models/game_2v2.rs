@@ -8,7 +8,7 @@ use crate::db::schema::games_2v2::{self};
 pub struct NewGame2v2 {
     pub id: String,
     pub competition_id: String,
-    pub round: String,
+    pub round: i32,
     pub team1_id: String,
     pub team2_id: String,
     pub winner_id: String,
@@ -29,7 +29,7 @@ pub struct NewGame2v2 {
 pub struct Game2v2 {
     pub id: String,
     pub competition_id: String,
-    pub round: String,
+    pub round: i32,
     pub team1_id: String,
     pub team2_id: String,
     pub winner_id: String,
@@ -52,7 +52,7 @@ pub struct Game2v2 {
 pub struct SqlGame2v2 {
     pub id: String,
     pub competition_id: String,
-    pub round: String,
+    pub round: i32,
     pub team1_id: String,
     pub team2_id: String,
     pub winner_id: String,
@@ -74,7 +74,7 @@ pub struct SqlGame2v2 {
 pub struct PublicGame2v2 {
     pub id: String,
     pub competition_id: String,
-    pub round: String,
+    pub round: i32,
     pub team1_id: String,
     pub team2_id: String,
     pub winner_id: String,
@@ -170,7 +170,7 @@ impl From<NewGame2v2> for SqlGame2v2 {
 impl NewGame2v2 {
     pub fn new(
         competition_id: String, 
-        round: String,
+        round: i32,
         team1_id: String,
         team2_id: String,
         team1bot1_id: String,

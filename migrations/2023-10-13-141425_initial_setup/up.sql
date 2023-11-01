@@ -31,7 +31,7 @@ CREATE TABLE teams (
 CREATE TABLE games_2v2 (
     id                      VARCHAR(255) NOT NULL PRIMARY KEY,
     competition_id          VARCHAR(255) NOT NULL,
-    round                   VARCHAR(255) NOT NULL,
+    round                   INTEGER NOT NULL,
     team1_id                VARCHAR(255) NOT NULL,
     team2_id                VARCHAR(255) NOT NULL,
     winner_id               VARCHAR(255) NOT NULL,

@@ -140,7 +140,7 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     // Initialize a new 2v2 game with details from the provided teams and competition
     let match_game = NewGame2v2::new(
         competition.id.clone(),
-        competition.round.to_string(),
+        competition.round,
         team1.id.clone(),
         team2.id.clone(),
         team1.bot1.clone(),
