@@ -49,7 +49,8 @@ use super::command_executor::{execute_command, recursive_copy};
 /// - The cleanup process fails.
 /// - There's a problem updating the competition's round in the database.
 ///
-pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchMakerError> {
+pub fn run_2v2_round(competition_id: String) -> Result<(), MatchMakerError> {
+    println!("Running 2v2 competition: {}", competition_id);
     let competition = match get_competition_by_id(competition_id) {
         Ok(c) => c,
         Err(e) => return Err(MatchMakerError::DatabaseError(e))
@@ -81,7 +82,7 @@ pub fn run_2v2_round(competition_id: String) -> Result<Vec<(Team, Team)>, MatchM
         return Err(MatchMakerError::DatabaseError(e))
     }  
 
-    Ok(match_pairs)
+    Ok(())
 }
 
 /// Cleans up the matches directory by removing all sub-directories.

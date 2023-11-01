@@ -1,10 +1,12 @@
-use std::env;
+use std::{env, thread};
 
 use actix_cors::Cors;
 use actix_web::HttpServer;
 use actix_web_httpauth::extractors::bearer::Config;
+use controllers::{matchmaker_2v2::run_2v2_round, competitions::run_competitions_round};
 use dotenv::dotenv;
 use actix_web::{App, web, http, middleware::Logger};
+use tokio_cron_scheduler::{JobScheduler, Job};
 
 use crate::routes::{
     login::login, 
@@ -34,6 +36,10 @@ async fn main() -> std::io::Result<()>  {
     println!("[SETUP] Setting up environment.");
     let (port, url) = setup_env();
    
+    thread::spawn(|| {
+        run_cron();
+    });
+
     // setup Http server
     let mut server = HttpServer::new(move || {
         // setup CORS
@@ -86,4 +92,45 @@ fn setup_env() -> (u16, Option<String>) {
     let port = env::var("PORT").expect("$PORT is not set").parse::<u16>().unwrap();
     let url = env::var("URL").ok();
     (port, url)
+}
+
+/// Schedules and runs a cron job to execute the `run_competitions_round` function every hour.
+///
+/// This function sets up a cron job using the `JobScheduler` library. The cron job is scheduled to
+/// run at the start of every hour, every day, and it calls the `run_competitions_round` function.
+/// If there's any error while running the `run_competitions_round` function, the error is printed to the console.
+///
+/// Additionally, a shutdown handler is set up for the scheduler. This handler prints a shutdown message
+/// when the scheduler is shutting down.
+///
+/// # Panics
+///
+/// This function will panic if there's an error setting up the cron job or starting the scheduler.
+///
+#[tokio::main]
+async fn run_cron() {
+    let mut sched = JobScheduler::new();
+    match sched.add(Job::new_async("0 * * * * *", move |_, _|  Box::pin(async { 
+        if let Err(e) = run_competitions_round() {
+            println!("Error on running round: {:?}", e)
+        }
+    })).unwrap()) {
+        Ok(c) => println!("Started cron!: {:?}", c),
+        Err(e) => println!("Something went wrong scheduling CRON: {:?}", e)
+    };
+
+    // set shudown handler
+    match sched.set_shutdown_handler(Box::new(|| {
+        Box::pin(async move {
+          println!("Shut down done");
+        })
+    })) {
+        Ok(c) => println!("Shutdown handler set for cron!: {:?}", c),
+        Err(e) => println!("Something went wrong setting shutdown handler for CRON: {:?}", e)
+    };
+
+    // start cron
+    if let Err(e) = sched.start().await {
+        println!("Error on scheduler {:?}", e);
+    }
 }
