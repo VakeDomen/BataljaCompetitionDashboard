@@ -26,7 +26,7 @@ use crate::routes::{
     team_disband::team_disband, 
     team_bot_change::team_bot_change, 
     matchmaking_test::mmt, 
-    bot_win_rates::bots_win_rate,
+    bot_win_rates::bots_win_rate, competition_rounds::competition_rounds,
 };
 
 mod routes;
@@ -81,6 +81,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(competition_running)
                 .service(competition_attended)
                 .service(competition_id)
+                .service(competition_rounds)
                 .service(mmt)
             )
             

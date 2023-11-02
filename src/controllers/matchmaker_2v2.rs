@@ -78,7 +78,7 @@ pub fn run_2v2_round(competition_id: String) -> Result<(), MatchMakerError> {
     if let Err(e) = set_competition_round(competition.id.clone(), new_round) {
         return Err(MatchMakerError::DatabaseError(e))
     }  
-
+    println!("Competition done!");
     Ok(())
 }
 

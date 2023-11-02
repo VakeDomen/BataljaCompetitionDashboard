@@ -38,7 +38,7 @@ pub async fn bots_win_rate(auth: BearerAuth, team_id: web::Path<String>) -> Http
     for bot in bots.into_iter() {
         let games_played = match get_games_by_bot_id(bot.id.clone()) {
             Ok(games) => games,
-            Err(e) => return HttpResponse::InternalServerError().finish()
+            Err(_) => return HttpResponse::InternalServerError().finish()
         };
         let data = calc_win_rate(bot.id.clone(), games_played);
         hm.insert(bot.id, data);

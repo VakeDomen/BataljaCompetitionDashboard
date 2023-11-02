@@ -27,3 +27,17 @@ pub fn get_games_by_bot_id(bot_id: String) -> Result<Vec<Game2v2>, Error> {
         .load::<SqlGame2v2>(&mut conn)?;
     Ok(games.into_iter().map(Game2v2::from).collect::<Vec<Game2v2>>())
 }
+
+pub fn get_rounds_for_competition(team_id: String, com_id: String) -> Result<Vec<Game2v2>, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    let games = games_2v2
+        .filter(
+            team1_id
+                .eq(team_id.clone())
+                .or(team2_id.eq(team_id.clone()))
+        )
+        .distinct()
+        .filter(competition_id.eq(com_id))
+        .load::<SqlGame2v2>(&mut conn)?;
+    Ok(games.into_iter().map(Game2v2::from).collect::<Vec<Game2v2>>())
+}
