@@ -1,6 +1,7 @@
-use std::{path::Path, fs, process::{Command, Stdio}, os::unix::process::CommandExt};
+use std::{path::Path, fs, process::{Command, Stdio}, os::unix::process::CommandExt, time::{Duration, Instant}, thread, sync::mpsc};
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
+use tokio::time::timeout;
 
 use crate::{
     db::{
@@ -167,7 +168,13 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     }
 
     // Execute the game using the Evaluator JAR and collect the paths of each bot
-    let mut bot_paths: Vec<String> = bots.iter().map(|bot_id| match_folder.join(bot_id).to_string_lossy().to_string()).collect();
+    let mut bot_paths: Vec<String> = bots
+        .iter()
+        .map(|bot_id| match_folder
+            .join(bot_id)
+            .to_string_lossy()
+            .to_string())
+        .collect();
     let output_file = format!("./resources/games/{}.txt", match_game.id.to_string());
     let mut command_args = vec![
         "-jar".to_string(),
@@ -175,28 +182,45 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     ];
     command_args.append(&mut bot_paths);
 
-
-    // Run the game command and capture its output
-    let result = Command::new("java")
+    let child = Command::new("java")
         .args(&command_args)
         .stdout(Stdio::piped())
-        .before_exec(|| {
-            // Set the spawned process into its own process group
-            unsafe {
-                libc::setpgid(0, 0);
-            }
-            Ok(())
-        })
         .spawn()
         .map_err(|e| MatchMakerError::IOError(e))?;
 
-    let cid = result.id().clone();
-    let output = result.wait_with_output().map_err(|e| MatchMakerError::IOError(e))?;
+    let cid = child.id();
+
+    // Set a time limit for the match
+    let (sender, receiver) = mpsc::channel();
+    let _ = thread::spawn(move || {
+        let output = child.wait_with_output().map_err(|e| MatchMakerError::IOError(e));
+        let _ = sender.send(output);
+    });
+
+    // Wait for the handle to finish or timeout after 60 seconds
+    let output = match receiver.recv_timeout(Duration::from_secs(60)) {
+        Ok(result) => match result {
+            Ok(output) => output,
+            Err(e) => {
+                kill_process_group(cid);
+                return Err(e);
+            }
+        },
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            kill_process_group(cid);
+            return Err(MatchMakerError::TimeoutError);
+        },
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            kill_process_group(cid);
+            return Err(MatchMakerError::GameThreadJoinError);
+        }
+    };
 
 
-    // Ensure no zombies are left
-    let pgid = unsafe { libc::getpgid(cid as libc::pid_t) };
-    unsafe { libc::killpg(pgid, libc::SIGTERM) };
+    // Save the game's output to the specified file
+    if let Err(e) = fs::write(&output_file, &output.stdout) {
+        return Err(MatchMakerError::IOError(e));
+    }
 
     // Save the game's output to the specified file
     if let Err(e) = fs::write(&output_file, &output.stdout) {
@@ -511,4 +535,12 @@ fn create_match_pairs(match_num: i32, teams: Vec<Team>) -> Vec<(Team, Team)> {
     }
 
     pairs
+}
+
+
+fn kill_process_group(cid: u32) {
+    let pgid = unsafe { libc::getpgid(cid as libc::pid_t) };
+    if pgid > 0 {
+        unsafe { libc::killpg(pgid, libc::SIGKILL) }; // Use SIGKILL to force termination
+    }
 }

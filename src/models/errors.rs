@@ -6,6 +6,8 @@ pub enum MatchMakerError {
     DatabaseError(diesel::result::Error),
     IOError(io::Error),
     InvalidPath(Box<Path>),
+    TimeoutError,
+    GameThreadJoinError,
 }
 
 // Implement std::fmt::Display for MatchMakerError
@@ -15,6 +17,8 @@ impl fmt::Display for MatchMakerError {
             MatchMakerError::DatabaseError(err) => write!(f, "Database Error: {}", err),
             MatchMakerError::IOError(err) => write!(f, "IO Error: {}", err),
             MatchMakerError::InvalidPath(path) => write!(f, "Invalid path {:#?}", path),
+            MatchMakerError::TimeoutError => writeln!(f, "GameTimeout Error"),
+            MatchMakerError::GameThreadJoinError => writeln!(f, "GameThreadJoin Error"),
         }
     }
 }
@@ -26,6 +30,8 @@ impl fmt::Debug for MatchMakerError {
             MatchMakerError::DatabaseError(err) => write!(f, "MatchMakerError::DatabaseError: {:?}", err),
             MatchMakerError::IOError(err) => write!(f, "MatchMakerError::IOError: {:?}", err),
             MatchMakerError::InvalidPath(path) => write!(f, "MatchMakerError::InvalidPath: {:?}", path),
+            MatchMakerError::TimeoutError => writeln!(f, "MatchMakerError::TimeoutError"),
+            MatchMakerError::GameThreadJoinError => writeln!(f, "MatchMakerError::GameThreadJoinError"),
         }
     }
 }
@@ -37,6 +43,8 @@ impl Error for MatchMakerError {
             MatchMakerError::DatabaseError(err) => Some(err),
             MatchMakerError::IOError(err) => Some(err),
             MatchMakerError::InvalidPath(path) => None,
+            MatchMakerError::TimeoutError => None,
+            MatchMakerError::GameThreadJoinError => None,
         }
     }
 }
