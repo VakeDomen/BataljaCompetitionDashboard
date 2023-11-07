@@ -1,7 +1,8 @@
-use std::{path::Path, fs, process::{Command, Stdio}, os::unix::process::CommandExt, time::{Duration, Instant}, thread, sync::mpsc};
+use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, os::unix::process::CommandExt, time::{Duration, Instant}, thread, sync::mpsc, io::{Read, BufReader, BufRead}};
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 use tokio::time::timeout;
+use wait_timeout::ChildExt;
 
 use crate::{
     db::{
@@ -182,56 +183,86 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     ];
     command_args.append(&mut bot_paths);
 
-    let child = Command::new("java")
+    
+    // Spawn the child process
+    let mut child = Command::new("java")
         .args(&command_args)
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| MatchMakerError::IOError(e))?;
 
-    let cid = child.id();
+    // Set up asynchronous reading of stdout and stderr
+    let stdout = child.stdout.take().expect("Failed to take stdout");
+    let stderr = child.stderr.take().expect("Failed to take stderr");
 
-    // Set a time limit for the match
-    let (sender, receiver) = mpsc::channel();
-    let _ = thread::spawn(move || {
-        let output = child.wait_with_output().map_err(|e| MatchMakerError::IOError(e));
-        let _ = sender.send(output);
+    let stdout_reader = BufReader::new(stdout);
+    let stderr_reader = BufReader::new(stderr);
+
+    // Spawn threads to handle stdout and stderr
+    let stdout_handle = thread::spawn(move || {
+        stdout_reader
+            .lines()
+            .filter_map(Result::ok)
+            .collect::<Vec<String>>()
     });
 
-    // Wait for the handle to finish or timeout after 60 seconds
-    let output = match receiver.recv_timeout(Duration::from_secs(60)) {
-        Ok(result) => match result {
-            Ok(output) => output,
-            Err(e) => {
-                kill_process_group(cid);
-                return Err(e);
-            }
-        },
-        Err(mpsc::RecvTimeoutError::Timeout) => {
-            kill_process_group(cid);
-            return Err(MatchMakerError::TimeoutError);
-        },
-        Err(mpsc::RecvTimeoutError::Disconnected) => {
-            kill_process_group(cid);
-            return Err(MatchMakerError::GameThreadJoinError);
+    let stderr_handle = thread::spawn(move || {
+        stderr_reader
+            .lines()
+            .filter_map(Result::ok)
+            .collect::<Vec<String>>()
+    });
+
+    // Wait for the process to finish or timeout
+    let timeout_result: Option<ExitStatus> = child.wait_timeout(Duration::from_secs(60)).map_err(|e| MatchMakerError::IOError(e))?;
+
+    // Initialize flags for success and timeout
+    let mut timeout_occurred = false;
+    let mut success = true;
+    // Check if the process has finished
+    if let None = timeout_result {
+        // Timeout occurred
+        timeout_occurred = true;
+        success = false;
+        // Attempt to kill the child process
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    // Join the threads and collect the output
+    let output: Vec<String> = stdout_handle.join().expect("Failed to join stdout thread");
+    let errors: Vec<String> = stderr_handle.join().expect("Failed to join stderr thread");
+
+    if timeout_occurred {
+        // Process did not finish in time
+        return Err(MatchMakerError::TimeoutError);
+    } else if !success {
+        // Process finished but was not successful
+        return Err(MatchMakerError::GameProcessFailed);
+    }
+
+
+    // Save the game's output to the specified file
+    let output_string = output.join("\n");
+    if let Err(e) = fs::write(&output_file, &output_string) {
+        return Err(MatchMakerError::IOError(e));
+    }
+
+    // Save any errors to a separate file
+    if !errors.concat().trim().eq("...") {
+        let error_string = errors.join("\n");
+        let error_file = format!("./resources/games/{}_error.txt", match_game.id.to_string());
+        if let Err(e) = fs::write(&error_file, &error_string) {
+            // Log error output to help diagnose problems
+            log::error!("Error output from child process: {}", error_string);
+            return Err(MatchMakerError::IOError(e));
         }
-    };
-
-
-    // Save the game's output to the specified file
-    if let Err(e) = fs::write(&output_file, &output.stdout) {
-        return Err(MatchMakerError::IOError(e));
     }
 
-    // Save the game's output to the specified file
-    if let Err(e) = fs::write(&output_file, &output.stdout) {
-        return Err(MatchMakerError::IOError(e));
-    }
-
-    // Convert the game's output into a vector of strings
-    let lines: Vec<String> = String::from_utf8_lossy(&output.stdout).lines().map(String::from).collect();
 
     // Parse the game using the provided function and return the result
-    parse_game(lines, match_game)
+    parse_game(output, match_game)
 }
 
 /// Parses game output to determine match results and constructs a `Game2v2` object.
@@ -535,12 +566,4 @@ fn create_match_pairs(match_num: i32, teams: Vec<Team>) -> Vec<(Team, Team)> {
     }
 
     pairs
-}
-
-
-fn kill_process_group(cid: u32) {
-    let pgid = unsafe { libc::getpgid(cid as libc::pid_t) };
-    if pgid > 0 {
-        unsafe { libc::killpg(pgid, libc::SIGKILL) }; // Use SIGKILL to force termination
-    }
 }

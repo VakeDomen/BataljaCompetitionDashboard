@@ -8,6 +8,8 @@ pub enum MatchMakerError {
     InvalidPath(Box<Path>),
     TimeoutError,
     GameThreadJoinError,
+    InvalidOutput,
+    GameProcessFailed,
 }
 
 // Implement std::fmt::Display for MatchMakerError
@@ -19,6 +21,8 @@ impl fmt::Display for MatchMakerError {
             MatchMakerError::InvalidPath(path) => write!(f, "Invalid path {:#?}", path),
             MatchMakerError::TimeoutError => writeln!(f, "GameTimeout Error"),
             MatchMakerError::GameThreadJoinError => writeln!(f, "GameThreadJoin Error"),
+            MatchMakerError::InvalidOutput => writeln!(f, "InvalidOutput Error"),
+            MatchMakerError::GameProcessFailed => writeln!(f, "GameProcessFailed Error"),
         }
     }
 }
@@ -32,6 +36,8 @@ impl fmt::Debug for MatchMakerError {
             MatchMakerError::InvalidPath(path) => write!(f, "MatchMakerError::InvalidPath: {:?}", path),
             MatchMakerError::TimeoutError => writeln!(f, "MatchMakerError::TimeoutError"),
             MatchMakerError::GameThreadJoinError => writeln!(f, "MatchMakerError::GameThreadJoinError"),
+            MatchMakerError::InvalidOutput => writeln!(f, "MatchMakerError::InvalidOutput"),
+            MatchMakerError::GameProcessFailed => writeln!(f, "MatchMakerError::GameProcessFailed"),
         }
     }
 }
@@ -45,6 +51,8 @@ impl Error for MatchMakerError {
             MatchMakerError::InvalidPath(path) => None,
             MatchMakerError::TimeoutError => None,
             MatchMakerError::GameThreadJoinError => None,
+            MatchMakerError::InvalidOutput => None,
+            MatchMakerError::GameProcessFailed => None,
         }
     }
 }
