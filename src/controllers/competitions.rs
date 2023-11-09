@@ -1,4 +1,4 @@
-use crate::{models::{errors::MatchMakerError, competition}, db::operations_competition::get_running_competitions};
+use crate::{models::errors::MatchMakerError, db::operations_competition::get_running_competitions};
 
 use super::matchmaker_2v2::run_2v2_round;
 
