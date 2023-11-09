@@ -42,7 +42,7 @@ impl Error for MatchMakerError {
         match self {
             MatchMakerError::DatabaseError(err) => Some(err),
             MatchMakerError::IOError(err) => Some(err),
-            MatchMakerError::InvalidPath(path) => None,
+            MatchMakerError::InvalidPath(_) => None,
             MatchMakerError::TimeoutError => None,
             MatchMakerError::GameProcessFailed => None,
         }

@@ -2,7 +2,7 @@ use actix_web::{HttpResponse, post, web};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use crate::controllers::jwt::exchange_token_for_user;
 use crate::db::operations_game2v2::{get_game_by_id, game_set_public};
-use crate::db::operations_teams::{get_team_by_student_for_competition};
+use crate::db::operations_teams::get_team_by_student_for_competition;
 
 
 #[post("/game/public/{game_id}")]

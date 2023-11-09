@@ -1,7 +1,6 @@
-use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, os::unix::process::CommandExt, time::{Duration, Instant}, thread, sync::mpsc, io::{Read, BufReader, BufRead}};
+use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, time::Duration, thread, io::{BufReader, BufRead}};
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
-use tokio::time::timeout;
 use wait_timeout::ChildExt;
 
 use crate::{
@@ -118,6 +117,7 @@ fn cleanup_matches() -> Result<(), MatchMakerError> {
 ///
 /// This function manages the preparation, execution, and cleanup of a game match between two teams.
 /// The steps include:
+///
 /// 1. Initializing a new 2v2 game instance based on the teams and competition details.
 /// 2. Creating a unique directory for the match within the `./resources/matches` folder.
 /// 3. Copying the bots of both teams to the match directory.
@@ -138,6 +138,20 @@ fn cleanup_matches() -> Result<(), MatchMakerError> {
 ///
 /// A `Result` containing the structured game results (`Game2v2`) if successful. If there are any
 /// issues during the preparation, execution, or cleanup, a `MatchMakerError` will be returned.
+///
+/// # Errors
+///
+/// This function may return one of the following errors:
+///
+/// - `MatchMakerError::IOError` if there is an I/O error during file operations.
+/// - `MatchMakerError::TimeoutError` if the game process exceeds the specified timeout.
+/// - `MatchMakerError::GameProcessFailed` if the game process exits with an error.
+///
+/// # Notes
+/// 
+/// - This function assumes that the necessary external tools and JAR files for game evaluation are
+///   available and correctly configured.
+/// 
 fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Game2v2, MatchMakerError> {
     // Initialize a new 2v2 game with details from the provided teams and competition
     let match_game = NewGame2v2::new(

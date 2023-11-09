@@ -3,7 +3,7 @@ use std::{env, thread};
 use actix_cors::Cors;
 use actix_web::HttpServer;
 use actix_web_httpauth::extractors::bearer::Config;
-use controllers::{matchmaker_2v2::run_2v2_round, competitions::run_competitions_round};
+use controllers::competitions::run_competitions_round;
 use dotenv::dotenv;
 use actix_web::{App, web, http, middleware::Logger};
 use tokio_cron_scheduler::{JobScheduler, Job};
