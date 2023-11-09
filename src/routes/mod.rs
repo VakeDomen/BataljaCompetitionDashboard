@@ -16,6 +16,6 @@ pub mod team_bot_change;
 pub mod bot_upload;
 pub mod user_id;
 pub mod bot_win_rates;
-
+pub mod game_log;
 
 pub mod matchmaking_test;

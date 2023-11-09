@@ -14,6 +14,16 @@ pub fn insert_game(game: NewGame2v2) ->  Result<Game2v2, Error> {
     Ok(Game2v2::from(new_bot))
 }
 
+pub fn get_game_by_id(uid: String) -> Result<Game2v2, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    match games_2v2
+        .filter(id.eq(uid))
+        .first::<SqlGame2v2>(&mut conn) {
+            Ok(t) => Ok(Game2v2::from(t)),
+            Err(e) => Err(e)
+    }
+}
+
 pub fn get_games_by_bot_id(bot_id: String) -> Result<Vec<Game2v2>, Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     let games = games_2v2
