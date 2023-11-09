@@ -51,3 +51,11 @@ pub fn get_rounds_for_competition(team_id: String, com_id: String) -> Result<Vec
         .load::<SqlGame2v2>(&mut conn)?;
     Ok(games.into_iter().map(Game2v2::from).collect::<Vec<Game2v2>>())
 }
+
+pub fn game_set_public(game_id: String, public_state: bool) -> Result<(), Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    diesel::update(games_2v2.filter(id.eq(game_id)))
+        .set(public.eq(public_state))
+        .execute(&mut conn)?;
+    Ok(())
+}

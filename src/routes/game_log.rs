@@ -17,7 +17,7 @@ struct GameLogResponse {
 }
 
 #[get("/game/log/{id}")]
-pub async fn get_game_log(auth: Option<BearerAuth>, id: web::Path<String>) -> HttpResponse {
+pub async fn game_log(auth: Option<BearerAuth>, id: web::Path<String>) -> HttpResponse {
     let game = match get_game_by_id(id.clone()) {
         Ok(game) => game,
         Err(_) => return HttpResponse::NotFound().finish()
@@ -43,7 +43,7 @@ pub async fn get_game_log(auth: Option<BearerAuth>, id: web::Path<String>) -> Ht
             return HttpResponse::Forbidden().finish();
         }
     }
-    
+
     let log_file_path = game.log_file_path;
 
     // Load the log file contents here
