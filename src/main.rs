@@ -29,7 +29,9 @@ use crate::routes::{
     bot_win_rates::bots_win_rate, 
     competition_rounds::competition_rounds, 
     game_log::game_log, 
-    game_toggle_public::game_toggle_public, competition_team_count::competition_team_count,
+    game_toggle_public::game_toggle_public, 
+    competition_team_count::competition_team_count, 
+    game_id::game_id,
 };
 
 mod routes;
@@ -88,6 +90,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(competition_rounds)
                 .service(game_log)
                 .service(game_toggle_public)
+                .service(game_id)
                 .service(mmt)
             )
             

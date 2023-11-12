@@ -19,5 +19,6 @@ pub mod user_id;
 pub mod bot_win_rates;
 pub mod game_log;
 pub mod game_toggle_public;
+pub mod game_id;
 
 pub mod matchmaking_test;

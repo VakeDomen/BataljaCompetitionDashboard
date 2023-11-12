@@ -12,6 +12,13 @@ use crate::{
     models::game_2v2::Game2v2,
 };
 
+type RoundData = (
+    i32,            // points gained/lost in the round
+    String,         // bot 1 id
+    String,         // bot 2 id
+    Vec<String>     // vec of ids of matches
+);
+
 #[get("/competition/rounds/{team_id}")]
 pub async fn competition_rounds(auth: BearerAuth, team_id: web::Path<String>) -> HttpResponse {
     let requesting_user = match exchange_token_for_user(auth) {
@@ -44,12 +51,13 @@ pub async fn competition_rounds(auth: BearerAuth, team_id: web::Path<String>) ->
 }
 
 
-fn construct_output(games: Vec<Game2v2>, team_id: String) -> HashMap<i32, (i32, String, String)> {
-    let mut hm: HashMap<i32, (i32, String, String)> = HashMap::new();
+fn construct_output(games: Vec<Game2v2>, team_id: String) -> HashMap<i32, RoundData> {
+    let mut hm: HashMap<i32, RoundData> = HashMap::new();
     for game in games.into_iter() {
         let bots = get_my_bots(&game, &team_id);
         let game_round = game.round.clone();
-        let current_round_score = hm.entry(game_round).or_insert((0, bots.0, bots.1));
+        let current_round_score = hm.entry(game_round).or_insert((0, bots.0, bots.1, Vec::new()));
+        current_round_score.3.push(game.id.clone());
         if is_game_won(game, &team_id) {
             current_round_score.0 += 1;
         } else {
