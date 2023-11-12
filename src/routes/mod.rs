@@ -5,6 +5,7 @@ pub mod competition_create;
 pub mod competition_running;
 pub mod competition_attended;
 pub mod competition_rounds;
+pub mod competition_team_count;
 pub mod team_create;
 pub mod team_join;
 pub mod team_leave;

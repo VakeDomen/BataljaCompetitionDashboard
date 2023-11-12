@@ -1,4 +1,4 @@
-use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, time::Duration, thread, io::{BufReader, BufRead}};
+use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, time::Duration, thread, io::{BufReader, BufRead}, collections::HashMap};
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 use wait_timeout::ChildExt;
@@ -14,7 +14,7 @@ use crate::{
         errors::MatchMakerError, 
         bot::Bot, 
         game_2v2::{NewGame2v2, Game2v2}, 
-        competition::Competition
+        competition::Competition, game_player_stats::GamePlayerStats
     }
 };
 
@@ -304,8 +304,14 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
     let mut r_blue = 0;
     let mut r_green = 0;
     let mut r_yellow = 0;
+    let mut current_bot: Option<String> = None;
+    let mut stats: HashMap<String, GamePlayerStats> = HashMap::new();
 
     for line in lines.into_iter() {
+        // track score through the game
+        // the last score is the final score of the game
+        // needed to determine the winner (if timeout still both teams are alive
+        // and the "survived"/"winnwe" stat at the end is not enough)
         if line.contains("R ") {
             let parts: Vec<&str> = line.split(" ").collect();
             if parts.len() == 3 {
@@ -318,12 +324,74 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
                 }
             }
         }
+
+        if line.contains("STAT ") {
+            // try to extract a bot name
+            // also init a stat object for the player (untill next player id there is going to 
+            // be a sequence of stats in form of <key>: <value> for this player)
+            let bot_id_option = line.split("/").last();
+            if let Some(bid) = bot_id_option {
+                current_bot = Some(bid.to_string());
+                stats.insert(bid.into(), GamePlayerStats::default());
+            }
+        }
+
+
+        let parts: Vec<&str> = line.split(" ").collect();
+        
+        // if collecting player stats
+        if let Some(ref bid) = current_bot {
+
+            if parts.len() == 2 {
+                let stat = match stats.get_mut(bid) {
+                    Some(s) => s,
+                    None => continue,
+                };
+                
+                match parts[0] {
+                    "turnsPlayed"           => stat.turnsPlayed             = parts[1].parse().unwrap_or(0),
+                    "winner"                => stat.winner                  = parts[1].parse().unwrap_or(false),
+                    "fleetGenerated"        => stat.fleetGenerated          = parts[1].parse().unwrap_or(0),
+                    "fleetLost"             => stat.fleetLost               = parts[1].parse().unwrap_or(0),
+                    "fleetReinforced"       => stat.fleetReinforced         = parts[1].parse().unwrap_or(0),
+                    "largestAttack"         => stat.largestAttack           = parts[1].parse().unwrap_or(0),
+                    "largestLoss"           => stat.largestLoss             = parts[1].parse().unwrap_or(0),
+                    "largestReinforcement"  => stat.largestReinforcement    = parts[1].parse().unwrap_or(0),
+                    "planetsLost"           => stat.planetsLost             = parts[1].parse().unwrap_or(0),
+                    "planetsConquered"      => stat.planetsConquered        = parts[1].parse().unwrap_or(0),
+                    "planetsDefended"       => stat.planetsDefended         = parts[1].parse().unwrap_or(0),
+                    "planetsAttacked"       => stat.planetsAttacked         = parts[1].parse().unwrap_or(0),
+                    "numFleetLost"          => stat.numFleetLost            = parts[1].parse().unwrap_or(0),
+                    "numFleetReinforced"    => stat.numFleetReinforced      = parts[1].parse().unwrap_or(0),
+                    "numFleetGenerated"     => stat.numFleetGenerated       = parts[1].parse().unwrap_or(0),
+                    "totalTroopsGenerated"  => stat.totalTroopsGenerated    = parts[1].parse().unwrap_or(0),
+                    _ => ()
+                }
+            }
+        }
     }
 
-    match_game.team1bot1_survived = r_red > 0;
-    match_game.team1bot2_survived = r_blue > 0;
-    match_game.team2bot1_survived = r_green > 0;
-    match_game.team2bot2_survived = r_yellow > 0;
+    // check if bots survived
+    match_game.team1bot1_survived = if let Some(stat) = stats.get(&match_game.team1bot1_id) {
+        stat.winner
+    } else {
+        false
+    };
+    match_game.team1bot2_survived = if let Some(stat) = stats.get(&match_game.team1bot2_id) {
+        stat.winner
+    } else {
+        false
+    };
+    match_game.team2bot1_survived = if let Some(stat) = stats.get(&match_game.team2bot1_id) {
+        stat.winner
+    } else {
+        false
+    };
+    match_game.team2bot2_survived = if let Some(stat) = stats.get(&match_game.team2bot2_id) {
+        stat.winner
+    } else {
+        false
+    };
 
     match (
         &match_game.team1bot1_survived,
@@ -340,9 +408,11 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
         (_, _, _, _) => match_game.winner_id = "".to_string(),
     }
 
+    // if multiple teams alive at the end (timeout) check who won by score
     if match_game.winner_id.eq("") {
-        let t1_score = r_red + r_blue;
-        let t2_score = r_green + r_yellow;
+        let t1_score = r_red + r_green;
+        let t2_score = r_blue + r_yellow;
+        
         if t1_score > t2_score {
             match_game.winner_id = match_game.team1_id.clone();
         } else {
