@@ -2,27 +2,27 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GamePlayerStats {
-    pub turnsPlayed: i32,
+    pub turns_played: i32,
     pub winner: bool,
-    pub fleetGenerated: i32,
-    pub fleetLost: i32,
-    pub fleetReinforced: i32,
-    pub largestAttack: i32,
-    pub largestLoss: i32,
-    pub largestReinforcement: i32,
-    pub planetsLost: i32,
-    pub planetsConquered: i32,
-    pub planetsDefended: i32,
-    pub planetsAttacked: i32,
-    pub numFleetLost: i32,
-    pub numFleetReinforced: i32,
-    pub numFleetGenerated: i32,
-    pub totalTroopsGenerated: i32,
+    pub fleet_generated: i32,
+    pub fleet_lost: i32,
+    pub fleet_reinforced: i32,
+    pub largest_attack: i32,
+    pub largest_loss: i32,
+    pub largest_reinforcement: i32,
+    pub planets_lost: i32,
+    pub planets_conquered: i32,
+    pub planets_defended: i32,
+    pub planets_attacked: i32,
+    pub num_fleet_lost: i32,
+    pub num_fleet_reinforced: i32,
+    pub num_fleet_generated: i32,
+    pub total_troops_generated: i32,
 }
 
 
 impl Default for GamePlayerStats {
     fn default() -> Self {
-        Self { turnsPlayed: Default::default(), winner: Default::default(), fleetGenerated: Default::default(), fleetLost: Default::default(), fleetReinforced: Default::default(), largestAttack: Default::default(), largestLoss: Default::default(), largestReinforcement: Default::default(), planetsLost: Default::default(), planetsConquered: Default::default(), planetsDefended: Default::default(), planetsAttacked: Default::default(), numFleetLost: Default::default(), numFleetReinforced: Default::default(), numFleetGenerated: Default::default(), totalTroopsGenerated: Default::default() }
+        Self { turns_played: Default::default(), winner: Default::default(), fleet_generated: Default::default(), fleet_lost: Default::default(), fleet_reinforced: Default::default(), largest_attack: Default::default(), largest_loss: Default::default(), largest_reinforcement: Default::default(), planets_lost: Default::default(), planets_conquered: Default::default(), planets_defended: Default::default(), planets_attacked: Default::default(), num_fleet_lost: Default::default(), num_fleet_reinforced: Default::default(), num_fleet_generated: Default::default(), total_troops_generated: Default::default() }
     }
 }

@@ -2,6 +2,7 @@ use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, time::Duration,
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 use wait_timeout::ChildExt;
+use num_cpus;
 
 use crate::{
     db::{
@@ -65,10 +66,26 @@ pub fn run_2v2_round(competition_id: String) -> Result<(), MatchMakerError> {
     let compiled_teams = compile_team_bots(teams);
     let match_pairs = create_match_pairs(competition.games_per_round, compiled_teams);
 
-    match_pairs.par_iter().for_each(|match_pair| {
-        if let Err(e) = run_match(&competition, &match_pair.0, &match_pair.1) {
-            eprintln!("Error: {}", e)
-        }
+    
+    // Get the number of available logical cores
+    let num_cores = num_cpus::get();
+
+    // Calculate the number of threads to use (one less than the number of cores)
+    let num_threads = num_cores - 1;
+    println!("ThreadS: {}", num_threads);
+    // Create a custom thread pool with a specified number of threads
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .unwrap();
+
+    // Execute the parallel operation with the custom thread pool
+    pool.install(|| {
+        match_pairs.par_iter().for_each(|match_pair| {
+            if let Err(e) = run_match(&competition, &match_pair.0, &match_pair.1) {
+                eprintln!("Error: {}", e)
+            }
+        });
     });
   
     // Cleanup: Remove the match directory
@@ -348,22 +365,22 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
                 };
                 
                 match parts[0] {
-                    "turnsPlayed:"           => stat.turnsPlayed             = parts[1].parse().unwrap_or(0),
+                    "turnsPlayed:"           => stat.turns_played             = parts[1].parse().unwrap_or(0),
                     "winner:"                => stat.winner                  = parts[1].parse().unwrap_or(false),
-                    "fleetGenerated:"        => stat.fleetGenerated          = parts[1].parse().unwrap_or(0),
-                    "fleetLost:"             => stat.fleetLost               = parts[1].parse().unwrap_or(0),
-                    "fleetReinforced:"       => stat.fleetReinforced         = parts[1].parse().unwrap_or(0),
-                    "largestAttack:"         => stat.largestAttack           = parts[1].parse().unwrap_or(0),
-                    "largestLoss:"           => stat.largestLoss             = parts[1].parse().unwrap_or(0),
-                    "largestReinforcement:"  => stat.largestReinforcement    = parts[1].parse().unwrap_or(0),
-                    "planetsLost:"           => stat.planetsLost             = parts[1].parse().unwrap_or(0),
-                    "planetsConquered:"      => stat.planetsConquered        = parts[1].parse().unwrap_or(0),
-                    "planetsDefended:"       => stat.planetsDefended         = parts[1].parse().unwrap_or(0),
-                    "planetsAttacked:"       => stat.planetsAttacked         = parts[1].parse().unwrap_or(0),
-                    "numFleetLost:"          => stat.numFleetLost            = parts[1].parse().unwrap_or(0),
-                    "numFleetReinforced:"    => stat.numFleetReinforced      = parts[1].parse().unwrap_or(0),
-                    "numFleetGenerated:"     => stat.numFleetGenerated       = parts[1].parse().unwrap_or(0),
-                    "totalTroopsGenerated:"  => stat.totalTroopsGenerated    = parts[1].parse().unwrap_or(0),
+                    "fleetGenerated:"        => stat.fleet_generated          = parts[1].parse().unwrap_or(0),
+                    "fleetLost:"             => stat.fleet_lost               = parts[1].parse().unwrap_or(0),
+                    "fleetReinforced:"       => stat.fleet_reinforced         = parts[1].parse().unwrap_or(0),
+                    "largestAttack:"         => stat.largest_attack           = parts[1].parse().unwrap_or(0),
+                    "largestLoss:"           => stat.largest_loss             = parts[1].parse().unwrap_or(0),
+                    "largestReinforcement:"  => stat.largest_reinforcement    = parts[1].parse().unwrap_or(0),
+                    "planetsLost:"           => stat.planets_lost             = parts[1].parse().unwrap_or(0),
+                    "planetsConquered:"      => stat.planets_conquered        = parts[1].parse().unwrap_or(0),
+                    "planetsDefended:"       => stat.planets_defended         = parts[1].parse().unwrap_or(0),
+                    "planetsAttacked:"       => stat.planets_attacked         = parts[1].parse().unwrap_or(0),
+                    "numFleetLost:"          => stat.num_fleet_lost            = parts[1].parse().unwrap_or(0),
+                    "numFleetReinforced:"    => stat.num_fleet_reinforced      = parts[1].parse().unwrap_or(0),
+                    "numFleetGenerated:"     => stat.num_fleet_generated       = parts[1].parse().unwrap_or(0),
+                    "totalTroopsGenerated:"  => stat.total_troops_generated    = parts[1].parse().unwrap_or(0),
                     _ => ()
                 }
             }
