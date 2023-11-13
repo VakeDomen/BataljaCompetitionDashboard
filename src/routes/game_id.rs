@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, get, web};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use crate::{models::{competition::PublicCompetition, game_2v2::PublicGame2v2}, db::{operations_game2v2::get_game_by_id, operations_teams::get_team_by_student_for_competition}, controllers::jwt::exchange_token_for_user};
+use crate::{models::game_2v2::PublicGame2v2, db::{operations_game2v2::get_game_by_id, operations_teams::get_team_by_student_for_competition}, controllers::jwt::exchange_token_for_user};
 
 #[get("/game/{comp_id}")]
 pub async fn game_id(auth: Option<BearerAuth>, comp_id: web::Path<String>) -> HttpResponse {

@@ -325,7 +325,7 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
             }
         }
 
-        if line.contains("STAT ") {
+        if line.contains("STAT: ") {
             // try to extract a bot name
             // also init a stat object for the player (untill next player id there is going to 
             // be a sequence of stats in form of <key>: <value> for this player)
@@ -341,7 +341,6 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
         
         // if collecting player stats
         if let Some(ref bid) = current_bot {
-
             if parts.len() == 2 {
                 let stat = match stats.get_mut(bid) {
                     Some(s) => s,
@@ -349,22 +348,22 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
                 };
                 
                 match parts[0] {
-                    "turnsPlayed"           => stat.turnsPlayed             = parts[1].parse().unwrap_or(0),
-                    "winner"                => stat.winner                  = parts[1].parse().unwrap_or(false),
-                    "fleetGenerated"        => stat.fleetGenerated          = parts[1].parse().unwrap_or(0),
-                    "fleetLost"             => stat.fleetLost               = parts[1].parse().unwrap_or(0),
-                    "fleetReinforced"       => stat.fleetReinforced         = parts[1].parse().unwrap_or(0),
-                    "largestAttack"         => stat.largestAttack           = parts[1].parse().unwrap_or(0),
-                    "largestLoss"           => stat.largestLoss             = parts[1].parse().unwrap_or(0),
-                    "largestReinforcement"  => stat.largestReinforcement    = parts[1].parse().unwrap_or(0),
-                    "planetsLost"           => stat.planetsLost             = parts[1].parse().unwrap_or(0),
-                    "planetsConquered"      => stat.planetsConquered        = parts[1].parse().unwrap_or(0),
-                    "planetsDefended"       => stat.planetsDefended         = parts[1].parse().unwrap_or(0),
-                    "planetsAttacked"       => stat.planetsAttacked         = parts[1].parse().unwrap_or(0),
-                    "numFleetLost"          => stat.numFleetLost            = parts[1].parse().unwrap_or(0),
-                    "numFleetReinforced"    => stat.numFleetReinforced      = parts[1].parse().unwrap_or(0),
-                    "numFleetGenerated"     => stat.numFleetGenerated       = parts[1].parse().unwrap_or(0),
-                    "totalTroopsGenerated"  => stat.totalTroopsGenerated    = parts[1].parse().unwrap_or(0),
+                    "turnsPlayed:"           => stat.turnsPlayed             = parts[1].parse().unwrap_or(0),
+                    "winner:"                => stat.winner                  = parts[1].parse().unwrap_or(false),
+                    "fleetGenerated:"        => stat.fleetGenerated          = parts[1].parse().unwrap_or(0),
+                    "fleetLost:"             => stat.fleetLost               = parts[1].parse().unwrap_or(0),
+                    "fleetReinforced:"       => stat.fleetReinforced         = parts[1].parse().unwrap_or(0),
+                    "largestAttack:"         => stat.largestAttack           = parts[1].parse().unwrap_or(0),
+                    "largestLoss:"           => stat.largestLoss             = parts[1].parse().unwrap_or(0),
+                    "largestReinforcement:"  => stat.largestReinforcement    = parts[1].parse().unwrap_or(0),
+                    "planetsLost:"           => stat.planetsLost             = parts[1].parse().unwrap_or(0),
+                    "planetsConquered:"      => stat.planetsConquered        = parts[1].parse().unwrap_or(0),
+                    "planetsDefended:"       => stat.planetsDefended         = parts[1].parse().unwrap_or(0),
+                    "planetsAttacked:"       => stat.planetsAttacked         = parts[1].parse().unwrap_or(0),
+                    "numFleetLost:"          => stat.numFleetLost            = parts[1].parse().unwrap_or(0),
+                    "numFleetReinforced:"    => stat.numFleetReinforced      = parts[1].parse().unwrap_or(0),
+                    "numFleetGenerated:"     => stat.numFleetGenerated       = parts[1].parse().unwrap_or(0),
+                    "totalTroopsGenerated:"  => stat.totalTroopsGenerated    = parts[1].parse().unwrap_or(0),
                     _ => ()
                 }
             }
@@ -419,6 +418,8 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
             match_game.winner_id = match_game.team2_id.clone();
         }
     }
+
+    match_game.additional_data = serde_json::to_string(&stats).unwrap_or(String::from("Error serializing"));
 
     match insert_game(match_game) {
         Ok(g) => Ok(g),

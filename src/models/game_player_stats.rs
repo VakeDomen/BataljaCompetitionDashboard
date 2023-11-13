@@ -1,3 +1,6 @@
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GamePlayerStats {
     pub turnsPlayed: i32,
     pub winner: bool,
