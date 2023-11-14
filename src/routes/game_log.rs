@@ -52,16 +52,8 @@ pub async fn game_log(auth: Option<BearerAuth>, id: web::Path<String>) -> HttpRe
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
 
-    // Create a response struct with the log file contents
-    let response = GameLogResponse {
-        log_file_contents,
-    };
-
-    // Serialize the response struct to JSON
-    let json_response = serde_json::to_string(&response).unwrap();
-
     // Return the JSON response with a 200 OK status
     HttpResponse::Ok()
-        .content_type("application/json")
-        .body(json_response)
+        .content_type("application/text; charset=utf-8")
+        .body(log_file_contents)
 }

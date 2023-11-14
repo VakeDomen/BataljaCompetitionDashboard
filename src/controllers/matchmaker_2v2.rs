@@ -72,7 +72,7 @@ pub fn run_2v2_round(competition_id: String) -> Result<(), MatchMakerError> {
 
     // Calculate the number of threads to use (one less than the number of cores)
     let num_threads = num_cores - 1;
-    println!("ThreadS: {}", num_threads);
+
     // Create a custom thread pool with a specified number of threads
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_threads)
@@ -188,6 +188,12 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
         return Err(MatchMakerError::IOError(e));
     }
 
+    // create a round directory (if doesn't exist) to later store game replays
+    let output_dir = format!("./resources/games/{}", competition.round);
+    if let Err(e) = fs::create_dir_all(&output_dir) {
+        return Err(MatchMakerError::IOError(e));
+    }
+
     // Copy each bot from the work directory to the match directory
     let bots = vec![&team1.bot1, &team1.bot2, &team2.bot1, &team2.bot2];
     for bot_id in &bots {
@@ -207,7 +213,7 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
             .to_string_lossy()
             .to_string())
         .collect();
-    let output_file = format!("./resources/games/{}.txt", match_game.id.to_string());
+    let output_file = format!("./resources/games/{}/{}.txt", competition.round, match_game.id.to_string());
     let mut command_args = vec![
         "-jar".to_string(),
         "resources/gamefiles/Evaluator.jar".to_string(),
@@ -283,7 +289,7 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     // Save any errors to a separate file
     if !errors.concat().trim().eq("...") {
         let error_string = errors.join("\n");
-        let error_file = format!("./resources/games/{}_error.txt", match_game.id.to_string());
+        let error_file = format!("./resources/games/{}/{}_error.txt", competition.round, match_game.id.to_string());
         if let Err(e) = fs::write(&error_file, &error_string) {
             // Log error output to help diagnose problems
             log::error!("Error output from child process: {}", error_string);
