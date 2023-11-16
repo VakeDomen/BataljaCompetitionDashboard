@@ -83,6 +83,7 @@ diesel::table! {
         bot1 -> Varchar,
         #[max_length = 255]
         bot2 -> Varchar,
+        elo -> Integer,
         created -> Datetime,
     }
 }

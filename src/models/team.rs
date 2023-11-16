@@ -24,6 +24,7 @@ pub struct Team {
     pub competition_id: String,
     pub bot1: String,
     pub bot2: String,
+    pub elo: i32,
     pub created: NaiveDateTime,
 }   
 
@@ -36,6 +37,7 @@ pub struct SqlTeam {
     pub competition_id: String,
     pub bot1: String,
     pub bot2: String,
+    pub elo: i32,
     pub created: NaiveDateTime,
 }
 
@@ -47,6 +49,7 @@ pub struct PublicTeam {
     pub competition_id: String,
     pub bot1: String,
     pub bot2: String,
+    pub elo: i32,
     pub created: NaiveDateTime,
 }
 
@@ -59,6 +62,7 @@ impl From<SqlTeam> for Team {
             competition_id: sql_team.competition_id,
             bot1: sql_team.bot1,
             bot2: sql_team.bot2,
+            elo: sql_team.elo,
             created: sql_team.created,
         }
     }
@@ -73,6 +77,7 @@ impl From<Team> for PublicTeam {
             competition_id: team.competition_id,
             bot1: team.bot1,
             bot2: team.bot2,
+            elo: team.elo,
             created: team.created,
         }
     }
@@ -87,6 +92,7 @@ impl From<NewTeam> for SqlTeam {
             competition_id: new_team.competition_id,
             bot1: "".to_string(),
             bot2: "".to_string(),
+            elo: 1000,
             created: Local::now().naive_utc(),
         }
     }

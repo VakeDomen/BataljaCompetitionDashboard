@@ -25,6 +25,7 @@ CREATE TABLE teams (
     competition_id  VARCHAR(255) NOT NULL,
     bot1            VARCHAR(255) NOT NULL,
     bot2            VARCHAR(255) NOT NULL,
+    elo             INTEGER NOT NULL,
     created         DATETIME NOT NULL
 );
 
