@@ -1,4 +1,4 @@
-use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, time::Duration, thread, io::{BufReader, BufRead}, collections::HashMap};
+use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, time::Duration, thread, io::{BufReader, BufRead}, collections::HashMap, sync::{Arc, Mutex}};
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 use wait_timeout::ChildExt;
@@ -16,10 +16,10 @@ use crate::{
         bot::Bot, 
         game_2v2::{NewGame2v2, Game2v2}, 
         competition::Competition, game_player_stats::GamePlayerStats
-    }
+    }, controllers::elo::update_team_elo
 };
 
-use super::command_executor::{execute_command, recursive_copy};
+use super::{command_executor::{execute_command, recursive_copy}, elo::calc_elo_changes};
 
 /// Runs a 2v2 round for a specified competition.
 ///
@@ -79,15 +79,35 @@ pub fn run_2v2_round(competition_id: String) -> Result<(), MatchMakerError> {
         .build()
         .unwrap();
 
+    // Create a thread-safe vector using Arc and Mutex
+    let games: Arc<Mutex<Vec<Game2v2>>> = Arc::new(Mutex::new(Vec::new()));
+
+
     // Execute the parallel operation with the custom thread pool
     pool.install(|| {
         match_pairs.par_iter().for_each(|match_pair| {
-            if let Err(e) = run_match(&competition, &match_pair.0, &match_pair.1) {
-                eprintln!("Error: {}", e)
+            match run_match(&competition, &match_pair.0, &match_pair.1) {
+                Ok(g) => {
+                    let mut games_lock = games.lock().unwrap();
+                    games_lock.push(g)
+                },
+                Err(e) => eprintln!("Error: {}", e),
             }
         });
     });
-  
+    
+    // Attempt to take ownership of the Mutex
+    let games_mutex = Arc::try_unwrap(games)
+        .expect("Arc::try_unwrap failed, there are multiple owners of the Arc");
+
+    // Lock the Mutex to access the vector
+    let games_vec = games_mutex.into_inner()
+        .expect("Mutex::into_inner failed, the mutex is poisoned");
+
+    if let Err(e) = update_team_elo(games_vec) {
+        return Err(MatchMakerError::DatabaseError(e.into()))
+    }; 
+    
     // Cleanup: Remove the match directory
     cleanup_matches()?;
     
@@ -443,6 +463,10 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
     }
 
     match_game.additional_data = serde_json::to_string(&stats).unwrap_or(String::from("Error serializing"));
+
+    if let Err(e) = calc_elo_changes(&mut match_game) {
+        return Err(MatchMakerError::DatabaseError(e.into()))
+    }
 
     match insert_game(match_game) {
         Ok(g) => Ok(g),

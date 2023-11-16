@@ -124,3 +124,17 @@ pub fn set_team_bot(team: &Team, bot: BotSelector, bot_id: String) -> Result<(),
     };
     Ok(())
 }
+
+pub fn add_elo_change(tid: String, elo_change: i32) -> Result<(), Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    let team: SqlTeam = teams
+        .find(tid.clone())
+        .first(&mut conn)?;
+    // Calculate the new ELO
+    let new_elo = team.elo + elo_change;
+    // Update the team's ELO in the database
+    diesel::update(teams.find(tid))
+        .set(elo.eq(new_elo))
+        .execute(&mut conn)?;
+    Ok(())
+}

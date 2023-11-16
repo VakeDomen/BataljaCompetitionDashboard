@@ -22,6 +22,8 @@ pub struct NewGame2v2 {
     pub team2bot2_survived: bool,
     pub log_file_path: String,
     pub public: bool,
+    pub team1_elo: i32,
+    pub team2_elo: i32,
     pub additional_data: String,
 }
 
@@ -44,6 +46,8 @@ pub struct Game2v2 {
     pub log_file_path: String,
     pub public: bool,
     pub additional_data: String,
+    pub team1_elo: i32,
+    pub team2_elo: i32,
     pub created: NaiveDateTime,
 }   
 
@@ -67,6 +71,8 @@ pub struct SqlGame2v2 {
     pub log_file_path: String,
     pub public: bool,
     pub additional_data: String,
+    pub team1_elo: i32,
+    pub team2_elo: i32,
     pub created: NaiveDateTime,
 }
 
@@ -88,6 +94,8 @@ pub struct PublicGame2v2 {
     pub team2bot2_survived: bool,
     pub public: bool,
     pub additional_data: String,
+    pub team1_elo: i32,
+    pub team2_elo: i32,
     pub created: NaiveDateTime,
 }
 
@@ -111,6 +119,8 @@ impl From<SqlGame2v2> for Game2v2 {
             log_file_path: sql_game_2v2.log_file_path,
             public: sql_game_2v2.public,
             additional_data: sql_game_2v2.additional_data,
+            team1_elo: sql_game_2v2.team1_elo,
+            team2_elo: sql_game_2v2.team2_elo,
             created: sql_game_2v2.created,
         }
     }
@@ -135,6 +145,8 @@ impl From<Game2v2> for PublicGame2v2 {
             team2bot2_survived: game_2v2.team2bot2_survived,
             public: game_2v2.public,
             additional_data: game_2v2.additional_data,
+            team1_elo: game_2v2.team1_elo,
+            team2_elo: game_2v2.team2_elo,
             created: game_2v2.created,
         }
     }
@@ -160,6 +172,8 @@ impl From<NewGame2v2> for SqlGame2v2 {
             log_file_path: new_game_2v2.log_file_path,
             public: new_game_2v2.public,
             additional_data: new_game_2v2.additional_data,
+            team1_elo: new_game_2v2.team1_elo,
+            team2_elo: new_game_2v2.team2_elo,
             created: Local::now().naive_utc(),
         }
     }
@@ -195,6 +209,8 @@ impl NewGame2v2 {
             team2bot2_survived: true,
             log_file_path,
             public: false,
+            team1_elo: 0,
+            team2_elo: 0,
             additional_data: "".to_string(),
         }
     }

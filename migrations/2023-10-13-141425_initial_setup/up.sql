@@ -47,6 +47,8 @@ CREATE TABLE games_2v2 (
     log_file_path           VARCHAR(4096) NOT NULL,
     public                  BOOLEAN NOT NULL,
     additional_data         TEXT NOT NULL,
+    team1_elo               INTEGER NOT NULL,
+    team2_elo               INTEGER NOT NULL,
     created                 DATETIME NOT NULL
 );
 

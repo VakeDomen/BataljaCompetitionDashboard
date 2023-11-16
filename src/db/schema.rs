@@ -65,6 +65,8 @@ diesel::table! {
         log_file_path -> Varchar,
         public -> Bool,
         additional_data -> Text,
+        team1_elo -> Integer,
+        team2_elo -> Integer,
         created -> Datetime,
     }
 }
