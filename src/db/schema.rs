@@ -31,6 +31,8 @@ diesel::table! {
         #[max_length = 255]
         type_ -> Varchar,
         games_per_round -> Integer,
+        #[max_length = 255]
+        game_pack -> Varchar,
         created -> Datetime,
     }
 }

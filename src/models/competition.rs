@@ -22,6 +22,7 @@ pub struct Competition {
     pub round: i32,
     pub type_: String,
     pub games_per_round: i32,
+    pub game_pack: String,
     pub created: NaiveDateTime,
 }   
 
@@ -36,6 +37,7 @@ pub struct SqlCompetition {
     pub round: String,
     pub type_: String,
     pub games_per_round: i32,
+    pub game_pack: String,
     pub created: NaiveDateTime,
 }
 
@@ -62,6 +64,7 @@ impl From<SqlCompetition> for Competition {
             round: sql_competition.round.parse().unwrap(),
             type_: sql_competition.type_,
             games_per_round: sql_competition.games_per_round,
+            game_pack: sql_competition.game_pack,
             created: sql_competition.created,
         }
     }
@@ -91,8 +94,9 @@ impl From<NewCompetition> for SqlCompetition {
             end: new_competition.end,
             allowed_submissions: true.to_string(),
             round: 0.to_string(),
-            type_: new_competition.type_,
+            type_: new_competition.type_.clone(),
             games_per_round: 6,
+            game_pack: format!("./resources/packs/Batalja{}Pack.zip", new_competition.type_),
             created: Local::now().naive_utc(),
         }
     }

@@ -15,6 +15,7 @@ CREATE TABLE competitions (
     round                   VARCHAR(255) NOT NULL,
     type                    VARCHAR(255) NOT NULL,
     games_per_round         INTEGER NOT NULL,
+    game_pack               VARCHAR(255) NOT NULL,
     created                 DATETIME NOT NULL
 );
 
