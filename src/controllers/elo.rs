@@ -2,7 +2,7 @@ use diesel::result::Error;
 
 use crate::{models::game_2v2::{Game2v2, NewGame2v2}, db::operations_teams::{get_team_by_id, add_elo_change}};
 
-
+const ELO_K_FAATOR: i32 = 16;
 
 pub fn update_team_elo(games: Vec<Game2v2>) -> Result<(), Error> {
     for game in games.into_iter() {
@@ -36,7 +36,6 @@ pub fn calc_elo_changes(game: &mut NewGame2v2) -> Result<(), Error> {
 }
 
 fn calculate_elo_change(player_elo: i32, opponent_elo: i32, result: f64) -> i32 {
-    let k_factor = 32;
     let expected_score = 1.0 / (1.0 + 10.0_f64.powf((opponent_elo - player_elo) as f64 / 400.0));
-    (k_factor as f64 * (result - expected_score)).round() as i32
+    (ELO_K_FAATOR as f64 * (result - expected_score)).round() as i32
 }

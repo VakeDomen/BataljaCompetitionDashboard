@@ -54,25 +54,23 @@ pub async fn competition_rounds(auth: BearerAuth, team_id: web::Path<String>) ->
 fn construct_output(games: Vec<Game2v2>, team_id: String) -> HashMap<i32, RoundData> {
     let mut hm: HashMap<i32, RoundData> = HashMap::new();
     for game in games.into_iter() {
+        
         let bots = get_my_bots(&game, &team_id);
         let game_round = game.round.clone();
         let current_round_score = hm.entry(game_round).or_insert((0, bots.0, bots.1, Vec::new()));
+        // log game id
         current_round_score.3.push(game.id.clone());
-        if is_game_won(game, &team_id) {
-            current_round_score.0 += 1;
+        
+
+        if game.team1_id == game.team2_id {
+            current_round_score.0 += 0;
+        } else if game.team1_id == team_id {
+            current_round_score.0 += game.team1_elo;
         } else {
-            current_round_score.0 -= 1;
+            current_round_score.0 += game.team2_elo;
         }
     }
     hm
-}
-
-fn is_game_won(game: Game2v2, team_id: &str) -> bool {
-    if game.team1_id.eq(team_id) {
-        game.team1_id.eq(&game.winner_id)
-    } else {
-        game.team2_id.eq(&game.winner_id)
-    }
 }
 
 fn get_my_bots(game: &Game2v2, team_id: &str) -> (String, String) {

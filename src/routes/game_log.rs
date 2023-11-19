@@ -1,8 +1,9 @@
-use std::fs;
+use std::{fs::{self, File}, io::Read};
 
 use actix_web::{HttpResponse, get, web};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use serde::Serialize;
+use zip::ZipArchive;
 use crate::{
     db::{
         operations_game2v2::get_game_by_id, 
@@ -46,14 +47,34 @@ pub async fn game_log(auth: Option<BearerAuth>, id: web::Path<String>) -> HttpRe
 
     let log_file_path = game.log_file_path;
 
-    // Load the log file contents here
-    let log_file_contents = match fs::read_to_string(log_file_path) {
-        Ok(log) => log,
+        
+    // Open the ZIP file
+    let file = match File::open(&log_file_path) {
+        Ok(file) => file,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
+
+    // Create a new ZIP archive from the file
+    let mut zip = match ZipArchive::new(file) {
+        Ok(zip) => zip,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+
+    // Assuming the log file is the first file in the archive
+    let mut log_file = match zip.by_index(0) {
+        Ok(file) => file,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+
+    // Read the contents of the log file
+    let mut log_file_contents = String::new();
+    if let Err(_) = log_file.read_to_string(&mut log_file_contents) {
+        return HttpResponse::InternalServerError().finish();
+    }
 
     // Return the JSON response with a 200 OK status
     HttpResponse::Ok()
         .content_type("application/text; charset=utf-8")
         .body(log_file_contents)
+
 }

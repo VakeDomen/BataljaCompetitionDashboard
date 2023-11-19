@@ -2,12 +2,15 @@ use std::path::Path;
 use std::{fmt, io};
 use std::error::Error;
 
+use zip::result::ZipError;
+
 pub enum MatchMakerError {
     DatabaseError(diesel::result::Error),
     IOError(io::Error),
     InvalidPath(Box<Path>),
     TimeoutError,
     GameProcessFailed,
+    ZippingError(ZipError),
 }
 
 // Implement std::fmt::Display for MatchMakerError
@@ -19,6 +22,7 @@ impl fmt::Display for MatchMakerError {
             MatchMakerError::InvalidPath(path) => write!(f, "Invalid path {:#?}", path),
             MatchMakerError::TimeoutError => writeln!(f, "GameTimeout Error"),
             MatchMakerError::GameProcessFailed => writeln!(f, "GameProcessFailed Error"),
+            MatchMakerError::ZippingError(err) => writeln!(f, "ZippingError: {}", err),
         }
     }
 }
@@ -32,6 +36,7 @@ impl fmt::Debug for MatchMakerError {
             MatchMakerError::InvalidPath(path) => write!(f, "MatchMakerError::InvalidPath: {:?}", path),
             MatchMakerError::TimeoutError => writeln!(f, "MatchMakerError::TimeoutError"),
             MatchMakerError::GameProcessFailed => writeln!(f, "MatchMakerError::GameProcessFailed"),
+            MatchMakerError::ZippingError(err) => writeln!(f, "MatchMakerError::ZippingError: {:?}", err),
         }
     }
 }
@@ -45,6 +50,7 @@ impl Error for MatchMakerError {
             MatchMakerError::InvalidPath(_) => None,
             MatchMakerError::TimeoutError => None,
             MatchMakerError::GameProcessFailed => None,
+            MatchMakerError::ZippingError(err) => Some(err),
         }
     }
 }

@@ -191,7 +191,6 @@ impl NewGame2v2 {
         team2bot2_id: String,
     ) -> Self {
         let id = Uuid::new_v4().to_string();
-        let log_file_path = format!("./resources/games/{}/{}.txt", round, id.clone());
         Self {
             id,
             competition_id,
@@ -207,7 +206,7 @@ impl NewGame2v2 {
             team1bot2_survived: true,
             team2bot1_survived: true,
             team2bot2_survived: true,
-            log_file_path,
+            log_file_path: "".to_string(),
             public: false,
             team1_elo: 0,
             team2_elo: 0,

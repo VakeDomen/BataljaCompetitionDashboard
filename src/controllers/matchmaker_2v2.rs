@@ -14,12 +14,12 @@ use crate::{
         team::Team, 
         errors::MatchMakerError, 
         bot::Bot, 
-        game_2v2::{NewGame2v2, Game2v2}, 
+        game_2v2::{NewGame2v2, Game2v2, self}, 
         competition::Competition, game_player_stats::GamePlayerStats
     }, controllers::elo::update_team_elo
 };
 
-use super::{command_executor::{execute_command, recursive_copy}, elo::calc_elo_changes};
+use super::{command_executor::{execute_command, recursive_copy}, elo::calc_elo_changes, file_handler::save_to_zip};
 
 /// Runs a 2v2 round for a specified competition.
 ///
@@ -191,7 +191,7 @@ fn cleanup_matches() -> Result<(), MatchMakerError> {
 /// 
 fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Game2v2, MatchMakerError> {
     // Initialize a new 2v2 game with details from the provided teams and competition
-    let match_game = NewGame2v2::new(
+    let mut match_game = NewGame2v2::new(
         competition.id.clone(),
         competition.round,
         team1.id.clone(),
@@ -233,7 +233,7 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
             .to_string_lossy()
             .to_string())
         .collect();
-    let output_file = format!("./resources/games/{}/{}.txt", competition.round, match_game.id.to_string());
+    let output_file = format!("./resources/games/{}/{}.zip", competition.round, match_game.id.to_string());
     let mut command_args = vec![
         "-jar".to_string(),
         "resources/gamefiles/Evaluator.jar".to_string(),
@@ -302,8 +302,10 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
 
     // Save the game's output to the specified file
     let output_string = output.join("\n");
-    if let Err(e) = fs::write(&output_file, &output_string) {
-        return Err(MatchMakerError::IOError(e));
+    if let Err(e) = save_to_zip(output_string, &output_file) {
+        return Err(e);
+    } else {
+        match_game.log_file_path = output_file;
     }
 
     // Save any errors to a separate file
