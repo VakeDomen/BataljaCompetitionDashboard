@@ -351,6 +351,12 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
     let mut r_yellow = 0;
     let mut current_bot: Option<String> = None;
     let mut stats: HashMap<String, GamePlayerStats> = HashMap::new();
+    let mut stats_keys = vec![
+        "team2bot2",
+        "team1bot2",
+        "team2bot1",
+        "team1bot1", 
+    ];
 
     for line in lines.into_iter() {
         // track score through the game
@@ -376,8 +382,11 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
             // be a sequence of stats in form of <key>: <value> for this player)
             let bot_id_option = line.split("/").last();
             if let Some(bid) = bot_id_option {
-                current_bot = Some(bid.to_string());
-                stats.insert(bid.into(), GamePlayerStats::default());
+                let next_key_option = stats_keys.pop();
+                if let Some(next_key) = next_key_option {
+                    current_bot = Some(bid.to_string());
+                    stats.insert(next_key.into(), GamePlayerStats::default());
+                }
             }
         }
 
