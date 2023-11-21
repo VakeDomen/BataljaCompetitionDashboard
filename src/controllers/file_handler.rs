@@ -17,7 +17,7 @@ pub fn save_to_zip(contents: String, file_name: &str) -> Result<(), MatchMakerEr
         .unix_permissions(0o755);
 
     // Start a new file inside the zip
-    zip.start_file(file_name, options)
+    zip.start_file(file_name.replace(".zip", ".txt"), options)
         .map_err(|e| MatchMakerError::ZippingError(e.into()))?;
 
     // Write the game output to the file inside the zip

@@ -380,13 +380,10 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
             // try to extract a bot name
             // also init a stat object for the player (untill next player id there is going to 
             // be a sequence of stats in form of <key>: <value> for this player)
-            let bot_id_option = line.split("/").last();
-            if let Some(bid) = bot_id_option {
-                let next_key_option = stats_keys.pop();
-                if let Some(next_key) = next_key_option {
-                    current_bot = Some(bid.to_string());
-                    stats.insert(next_key.into(), GamePlayerStats::default());
-                }
+            let next_key_option = stats_keys.pop();
+            if let Some(next_key) = next_key_option {
+                current_bot = Some(next_key.to_string());
+                stats.insert(next_key.into(), GamePlayerStats::default());
             }
         }
 
@@ -394,9 +391,10 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
         let parts: Vec<&str> = line.split(" ").collect();
         
         // if collecting player stats
-        if let Some(ref bid) = current_bot {
+        if let Some(bot_key) = &current_bot {
             if parts.len() == 2 {
-                let stat = match stats.get_mut(bid) {
+                
+                let stat = match stats.get_mut(bot_key) {
                     Some(s) => s,
                     None => continue,
                 };
@@ -425,22 +423,22 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
     }
 
     // check if bots survived
-    match_game.team1bot1_survived = if let Some(stat) = stats.get(&match_game.team1bot1_id) {
+    match_game.team1bot1_survived = if let Some(stat) = stats.get("team1bot1") {
         stat.winner
     } else {
         false
     };
-    match_game.team1bot2_survived = if let Some(stat) = stats.get(&match_game.team1bot2_id) {
+    match_game.team1bot2_survived = if let Some(stat) = stats.get("team1bot2") {
         stat.winner
     } else {
         false
     };
-    match_game.team2bot1_survived = if let Some(stat) = stats.get(&match_game.team2bot1_id) {
+    match_game.team2bot1_survived = if let Some(stat) = stats.get("team2bot1") {
         stat.winner
     } else {
         false
     };
-    match_game.team2bot2_survived = if let Some(stat) = stats.get(&match_game.team2bot2_id) {
+    match_game.team2bot2_survived = if let Some(stat) = stats.get("team2bot2") {
         stat.winner
     } else {
         false
@@ -484,7 +482,6 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
         Err(e) => Err(MatchMakerError::DatabaseError(e)),
     }
 }
-
 
 
 /// Attempts to compile the bots associated with each team in parallel.
