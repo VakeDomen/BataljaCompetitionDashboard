@@ -401,7 +401,7 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
                 
                 match parts[0] {
                     "turnsPlayed:"           => stat.turns_played             = parts[1].parse().unwrap_or(0),
-                    "winner:"                => stat.winner                  = parts[1].parse().unwrap_or(false),
+                    "survived:"              => stat.survived                  = parts[1].parse().unwrap_or(false),
                     "fleetGenerated:"        => stat.fleet_generated          = parts[1].parse().unwrap_or(0),
                     "fleetLost:"             => stat.fleet_lost               = parts[1].parse().unwrap_or(0),
                     "fleetReinforced:"       => stat.fleet_reinforced         = parts[1].parse().unwrap_or(0),
@@ -424,22 +424,22 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
 
     // check if bots survived
     match_game.team1bot1_survived = if let Some(stat) = stats.get("team1bot1") {
-        stat.winner
+        stat.survived
     } else {
         false
     };
     match_game.team1bot2_survived = if let Some(stat) = stats.get("team1bot2") {
-        stat.winner
+        stat.survived
     } else {
         false
     };
     match_game.team2bot1_survived = if let Some(stat) = stats.get("team2bot1") {
-        stat.winner
+        stat.survived
     } else {
         false
     };
     match_game.team2bot2_survived = if let Some(stat) = stats.get("team2bot2") {
-        stat.winner
+        stat.survived
     } else {
         false
     };
@@ -645,6 +645,11 @@ fn compile_bot(bot: &Bot) -> Result<(), MatchMakerError> {
     
     if java_files.is_empty() {
         return Err(MatchMakerError::IOError(std::io::Error::new(std::io::ErrorKind::NotFound, "No Java files found")));
+    }
+
+    // Check if "Player.java" exists in the list of Java files
+    if !java_files.iter().any(|file| file.ends_with("Player.java")) {
+        return Err(MatchMakerError::PlayerFileMissing);
     }
     
     // Convert the list of file paths to a format suitable for the `javac` command.

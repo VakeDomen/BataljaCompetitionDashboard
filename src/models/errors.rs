@@ -11,6 +11,7 @@ pub enum MatchMakerError {
     TimeoutError,
     GameProcessFailed,
     ZippingError(ZipError),
+    PlayerFileMissing,
 }
 
 // Implement std::fmt::Display for MatchMakerError
@@ -23,6 +24,7 @@ impl fmt::Display for MatchMakerError {
             MatchMakerError::TimeoutError => writeln!(f, "GameTimeout Error"),
             MatchMakerError::GameProcessFailed => writeln!(f, "GameProcessFailed Error"),
             MatchMakerError::ZippingError(err) => writeln!(f, "ZippingError: {}", err),
+            MatchMakerError::PlayerFileMissing => writeln!(f, "PlayerFileMissing Error"),
         }
     }
 }
@@ -37,6 +39,7 @@ impl fmt::Debug for MatchMakerError {
             MatchMakerError::TimeoutError => writeln!(f, "MatchMakerError::TimeoutError"),
             MatchMakerError::GameProcessFailed => writeln!(f, "MatchMakerError::GameProcessFailed"),
             MatchMakerError::ZippingError(err) => writeln!(f, "MatchMakerError::ZippingError: {:?}", err),
+            MatchMakerError::PlayerFileMissing => writeln!(f, "MatchMakerError::PlayerFileMissing"),
         }
     }
 }
@@ -51,6 +54,7 @@ impl Error for MatchMakerError {
             MatchMakerError::TimeoutError => None,
             MatchMakerError::GameProcessFailed => None,
             MatchMakerError::ZippingError(err) => Some(err),
+            MatchMakerError::PlayerFileMissing => None,
         }
     }
 }
