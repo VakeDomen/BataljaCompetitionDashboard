@@ -1,4 +1,4 @@
-use std::{path::Path, fs, process::{Command, Stdio, ExitStatus}, time::Duration, thread, io::{BufReader, BufRead}, collections::HashMap, sync::{Arc, Mutex}};
+use std::{path::Path, fs::{self, File}, process::{Command, Stdio, ExitStatus, Output}, time::Duration, thread, io::{BufReader, BufRead, self}, collections::HashMap, sync::{Arc, Mutex}};
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator, IntoParallelRefIterator};
 use wait_timeout::ChildExt;
@@ -12,7 +12,7 @@ use crate::{
     }, 
     models::{
         team::Team, 
-        errors::MatchMakerError, 
+        errors::{MatchMakerError, self}, 
         bot::Bot, 
         game_2v2::{NewGame2v2, Game2v2, self}, 
         competition::Competition, game_player_stats::GamePlayerStats
@@ -146,6 +146,61 @@ fn cleanup_matches() -> Result<(), MatchMakerError> {
             }
         }
     }
+
+    if let Err(e) = kill_java_player_processes() {
+        eprintln!("Failed killing java processes: {:?}", e);
+    }
+    Ok(())
+}
+
+
+/// Kill all processes running with the command "java Player."
+fn kill_java_player_processes() -> Result<(), std::io::Error> {
+    // Get a list of all processes with "java Player" in their command line
+    let ps_output = Command::new("ps")
+        .arg("ax")
+        .output()?;
+
+    // Convert the output to a string
+    let ps_output_str = String::from_utf8_lossy(&ps_output.stdout);
+
+    // Split the output into lines
+    let process_lines: Vec<&str> = ps_output_str.lines().collect();
+
+    // Iterate through the lines and find processes with "java Player"
+    for process_line in process_lines {
+        if process_line.contains("java Player") {
+            // Extract the process ID (PID)
+            let pid_str = process_line.split_whitespace().next().unwrap_or_default();
+
+            // Parse the PID as an integer
+            if let Ok(pid) = pid_str.parse::<i32>() {
+                // Kill the process using the "kill" command
+                let kill_result = Command::new("kill")
+                    .arg("-9") // Use SIGKILL to forcefully terminate the process
+                    .arg(pid.to_string())
+                    .output();
+
+                match kill_result {
+                    Ok(Output {
+                        status,
+                        stdout,
+                        stderr,
+                    }) => {
+                        if status.success() {
+                            println!("Killed process with PID {}: {:?}", pid, String::from_utf8_lossy(&stdout));
+                        } else {
+                            eprintln!("Failed to kill process with PID {}: {:?}", pid, String::from_utf8_lossy(&stderr));
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error killing process with PID {}: {:?}", pid, e);
+                    }
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -273,31 +328,31 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
 
     // Wait for the process to finish or timeout
     let timeout_result: Option<ExitStatus> = child.wait_timeout(Duration::from_secs(60)).map_err(|e| MatchMakerError::IOError(e))?;
-
     // Initialize flags for success and timeout
-    let mut timeout_occurred = false;
-    let mut success = true;
+    // let mut timeout_occurred = false;
+    // let mut success = true;
     // Check if the process has finished
     if let None = timeout_result {
         // Timeout occurred
-        timeout_occurred = true;
-        success = false;
+        // timeout_occurred = true;
+        // success = false;
         // Attempt to kill the child process
         let _ = child.kill();
-        let _ = child.wait();
+        let st = child.wait();
+        println!("Game timed out, killed and exited with status: {:#?}", st);
     }
 
     // Join the threads and collect the output
     let output: Vec<String> = stdout_handle.join().expect("Failed to join stdout thread");
     let errors: Vec<String> = stderr_handle.join().expect("Failed to join stderr thread");
 
-    if timeout_occurred {
-        // Process did not finish in time
-        return Err(MatchMakerError::TimeoutError);
-    } else if !success {
-        // Process finished but was not successful
-        return Err(MatchMakerError::GameProcessFailed);
-    }
+    // if timeout_occurred {
+    //     // Process did not finish in time
+    //     return Err(MatchMakerError::TimeoutError);
+    // } else if !success {
+    //     // Process finished but was not successful
+    //     return Err(MatchMakerError::GameProcessFailed);
+    // }
 
 
     // Save the game's output to the specified file
@@ -321,7 +376,7 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
 
 
     // Parse the game using the provided function and return the result
-    parse_game(output, match_game)
+    parse_game(output, errors, match_game)
 }
 
 /// Parses game output to determine match results and constructs a `Game2v2` object.
@@ -344,7 +399,78 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
 ///
 /// A `Result` containing a `Game2v2` object if successful, or a `MatchMakerError` if there's an error.
 ///
-fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2, MatchMakerError> {
+fn parse_game(lines: Vec<String>, errors: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2, MatchMakerError> {
+    if errors.len() > 1 { // always at least 1 because of first "..." row
+        parse_bugged_game(lines, errors, &mut match_game);
+    } else {
+        parse_healthy_game(lines, errors, &mut match_game);
+    }
+    
+
+    if let Err(e) = calc_elo_changes(&mut match_game) {
+        return Err(MatchMakerError::DatabaseError(e.into()))
+    }
+    
+    match insert_game(match_game) {
+        Ok(g) => Ok(g),
+        Err(e) => Err(MatchMakerError::DatabaseError(e)),
+    }
+}
+
+fn parse_bugged_game(_lines: Vec<String>, errors: Vec<String>, match_game: &mut NewGame2v2) -> () {
+    // find bot id
+    let bot_ids = [
+        match_game.team1bot1_id.clone(),
+        match_game.team1bot2_id.clone(),
+        match_game.team2bot1_id.clone(),
+        match_game.team2bot2_id.clone(),
+    ];
+    let mut bugged_bot_id_option = None;
+    for row in errors.iter() {
+        for bot_id in bot_ids.iter() {
+            if row.contains(bot_id) {
+                bugged_bot_id_option = Some(bot_id);
+                break;
+            }
+        }
+    }
+    match_game.team1bot1_survived = true;
+    match_game.team1bot2_survived = true;
+    match_game.team2bot1_survived = true;
+    match_game.team2bot2_survived = true;
+
+    if let Some(bugged_bot_id) = bugged_bot_id_option {
+        if &match_game.team1bot1_id == bugged_bot_id {
+            match_game.team1bot1_survived = false;
+            match_game.winner_id = match_game.team2_id.clone();
+        }
+
+        if &match_game.team1bot2_id == bugged_bot_id {
+            match_game.team1bot2_survived = false;
+            match_game.winner_id = match_game.team2_id.clone();
+        }
+
+        if &match_game.team2bot1_id == bugged_bot_id {
+            match_game.team2bot1_survived = false;
+            match_game.winner_id = match_game.team1_id.clone();
+        }
+
+        if &match_game.team2bot2_id == bugged_bot_id {
+            match_game.team2bot2_survived = false;
+            match_game.winner_id = match_game.team1_id.clone();
+        }
+    }
+
+    let additional_data_string = format!(
+        "{{ \"error\": \"{}\", \"blame_id\": \"{}\" }}", 
+        errors.join(" -NLC- "), 
+        bugged_bot_id_option.unwrap_or(&"Unknown".to_string())
+    );
+
+    match_game.additional_data = additional_data_string;
+}
+
+fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut NewGame2v2) -> () {
     let mut r_red = 0;
     let mut r_blue = 0;
     let mut r_green = 0;
@@ -401,7 +527,7 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
                 
                 match parts[0] {
                     "turnsPlayed:"           => stat.turns_played             = parts[1].parse().unwrap_or(0),
-                    "survived:"              => stat.survived                  = parts[1].parse().unwrap_or(false),
+                    "survive:"               => stat.survived                 = parts[1].parse().unwrap_or(false),
                     "fleetGenerated:"        => stat.fleet_generated          = parts[1].parse().unwrap_or(0),
                     "fleetLost:"             => stat.fleet_lost               = parts[1].parse().unwrap_or(0),
                     "fleetReinforced:"       => stat.fleet_reinforced         = parts[1].parse().unwrap_or(0),
@@ -471,16 +597,7 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
         }
     }
 
-    match_game.additional_data = serde_json::to_string(&stats).unwrap_or(String::from("Error serializing"));
-
-    if let Err(e) = calc_elo_changes(&mut match_game) {
-        return Err(MatchMakerError::DatabaseError(e.into()))
-    }
-
-    match insert_game(match_game) {
-        Ok(g) => Ok(g),
-        Err(e) => Err(MatchMakerError::DatabaseError(e)),
-    }
+    match_game.additional_data = serde_json::to_string(&stats).unwrap_or(String::from("{ \"error\": \"Error serializing\"}"));
 }
 
 
@@ -506,7 +623,7 @@ fn parse_game(lines: Vec<String>, mut match_game: NewGame2v2) -> Result<Game2v2,
 ///
 fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
     // Parallel processing of each team to compile associated bots
-    let results: Vec<Result<Team, MatchMakerError>> = teams.into_par_iter().filter_map(|team| {
+    let results: Vec<Team> = teams.into_par_iter().filter_map(|team| {
         // Skip teams without both bot1 and bot2
         if team.bot1.eq("") || team.bot2.eq("") {
             return None
@@ -515,45 +632,66 @@ fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
         // Retrieve bot details
         let bot1 = match get_bot_by_id(team.bot1.clone()) {
             Ok(b) => b,
-            Err(e) => return Some(Err(MatchMakerError::DatabaseError(e))),
+            Err(e) => return None,
         };
 
         let bot2 = match get_bot_by_id(team.bot2.clone()) {
             Ok(b) => b,
-            Err(e) => return Some(Err(MatchMakerError::DatabaseError(e))),
+            // Err(e) => return Some(Err(MatchMakerError::DatabaseError(e))),
+            Err(e) => return None,
         };
         
         // Attempt to compile bot1
         if let Err(e) = compile_bot(&bot1) {
             if let Err(e) = set_bot_error(bot1, e.to_string()) {
-                return Some(Err(MatchMakerError::DatabaseError(e)));
+                // return Some(Err(MatchMakerError::DatabaseError(e)));
+                return None;
             }
-            return Some(Err(e))
+            // return Some(Err(e))
+            return None
         }
 
         // Attempt to compile bot2
         if let Err(e) = compile_bot(&bot2) {
             if let Err(e) = set_bot_error(bot2, e.to_string()) {
-                return Some(Err(MatchMakerError::DatabaseError(e)));
+                // return Some(Err(MatchMakerError::DatabaseError(e)));
+                return None;
             }
-            return Some(Err(e))
+            // return Some(Err(e))
+            return None
         }
 
         // Return the team if both bots compiled successfully
-        Some(Ok(team))
+        Some(team)
     }).collect();
 
-    // Extract teams with successful bot compilations
-    let compiled_teams: Vec<Team> = results.into_iter().filter_map(|res| {
-        match res {
-            Ok(team) => Some(team),
-            Err(_) => None,
-        }
-    }).collect();
+    results
+    // // Extract teams with successful bot compilations
+    // let compiled_teams: Vec<Team> = results.into_iter().filter_map(|res| {
+    //     match res {
+    //         Ok(team) => Some(team),
+    //         Err(_) => None,
+    //     }
+    // }).collect();
 
-    compiled_teams
+    // compiled_teams
 }
 
+
+/// Check if a file contains the string "public static void main("
+fn contains_main_method(file_path: &str) -> io::Result<bool> {
+    let file = File::open(file_path)?;
+
+    for line in io::BufReader::new(file).lines() {
+        let line = line?;
+        // Check if the line contains the desired string
+        if line.contains("public static void main(") {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
 
 /// Compiles the provided bot's source code.
 ///
@@ -657,6 +795,18 @@ fn compile_bot(bot: &Bot) -> Result<(), MatchMakerError> {
         .iter()
         .map(AsRef::as_ref)
         .collect();
+
+    // Player.java path
+    let player_java_path = java_files.iter().find(|&file| file.contains("Player.java")).cloned().unwrap();
+    let contains_main_method_option = contains_main_method(&player_java_path);
+    if let Ok(has_main_function) = contains_main_method_option {
+        if !has_main_function {
+            return Err(MatchMakerError::MainMethodNotInPlayerFile);
+        }
+    } else {
+        return Err(MatchMakerError::MainMethodNotInPlayerFile);
+    }
+
 
     // Compile the Java files.
     if let Err(e) = execute_command(
