@@ -20,9 +20,21 @@ pub struct GamePlayerStats {
     pub total_troops_generated: i32,
 }
 
-
 impl Default for GamePlayerStats {
     fn default() -> Self {
         Self { turns_played: Default::default(), survived: Default::default(), fleet_generated: Default::default(), fleet_lost: Default::default(), fleet_reinforced: Default::default(), largest_attack: Default::default(), largest_loss: Default::default(), largest_reinforcement: Default::default(), planets_lost: Default::default(), planets_conquered: Default::default(), planets_defended: Default::default(), planets_attacked: Default::default(), num_fleet_lost: Default::default(), num_fleet_reinforced: Default::default(), num_fleet_generated: Default::default(), total_troops_generated: Default::default() }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GameError {
+    pub error: String,
+    pub blame_id: String,
+}
+
+
+impl Default for GameError {
+    fn default() -> Self {
+        Self { error: Default::default(), blame_id: Default::default() }
     }
 }

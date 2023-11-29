@@ -15,7 +15,7 @@ use crate::{
         errors::{MatchMakerError, self}, 
         bot::Bot, 
         game_2v2::{NewGame2v2, Game2v2, self}, 
-        competition::Competition, game_player_stats::GamePlayerStats
+        competition::Competition, game_player_stats::{GamePlayerStats, GameError}
     }, controllers::elo::update_team_elo
 };
 
@@ -461,13 +461,17 @@ fn parse_bugged_game(_lines: Vec<String>, errors: Vec<String>, match_game: &mut 
         }
     }
 
-    let additional_data_string = format!(
-        "{{ \"error\": \"{}\", \"blame_id\": \"{}\" }}", 
-        errors.join(" -NLC- "), 
-        bugged_bot_id_option.unwrap_or(&"Unknown".to_string())
-    );
+    let trimmed_lines: String = errors
+        .join("\n")
+        .replace("\\", "\\\\");
 
-    match_game.additional_data = additional_data_string;
+    // Remove backslashes from the formatted string
+    let additional_data_error = GameError {
+        error: trimmed_lines,
+        blame_id: bugged_bot_id_option.unwrap_or(&"Unknown".to_string()).to_string()
+    };
+
+    match_game.additional_data = serde_json::to_string(&additional_data_error).unwrap_or(String::from("{ \"error\": \"Error serializing\"}"));
 }
 
 fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut NewGame2v2) -> () {
@@ -632,18 +636,18 @@ fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
         // Retrieve bot details
         let bot1 = match get_bot_by_id(team.bot1.clone()) {
             Ok(b) => b,
-            Err(e) => return None,
+            Err(_) => return None,
         };
 
         let bot2 = match get_bot_by_id(team.bot2.clone()) {
             Ok(b) => b,
             // Err(e) => return Some(Err(MatchMakerError::DatabaseError(e))),
-            Err(e) => return None,
+            Err(_) => return None,
         };
         
         // Attempt to compile bot1
         if let Err(e) = compile_bot(&bot1) {
-            if let Err(e) = set_bot_error(bot1, e.to_string()) {
+            if let Err(_) = set_bot_error(bot1, e.to_string()) {
                 // return Some(Err(MatchMakerError::DatabaseError(e)));
                 return None;
             }
@@ -653,7 +657,7 @@ fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
 
         // Attempt to compile bot2
         if let Err(e) = compile_bot(&bot2) {
-            if let Err(e) = set_bot_error(bot2, e.to_string()) {
+            if let Err(_) = set_bot_error(bot2, e.to_string()) {
                 // return Some(Err(MatchMakerError::DatabaseError(e)));
                 return None;
             }
