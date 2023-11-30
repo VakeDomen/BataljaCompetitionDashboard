@@ -78,6 +78,8 @@ diesel::table! {
         #[max_length = 255]
         id -> Varchar,
         #[max_length = 255]
+        name -> Varchar,
+        #[max_length = 255]
         owner -> Varchar,
         #[max_length = 255]
         partner -> Varchar,

@@ -12,6 +12,7 @@ pub enum BotSelector {
 
 #[derive(Debug, Deserialize)]
 pub struct NewTeam {
+    pub name: String,
     pub owner: String,  
     pub competition_id: String,
 }
@@ -19,6 +20,7 @@ pub struct NewTeam {
 #[derive(Debug, Clone)]
 pub struct Team {
     pub id: String,
+    pub name: String,
     pub owner: String,
     pub partner: String,
     pub competition_id: String,
@@ -32,6 +34,7 @@ pub struct Team {
 #[diesel(table_name = teams)]
 pub struct SqlTeam {
     pub id: String,
+    pub name: String,
     pub owner: String,
     pub partner: String,
     pub competition_id: String,
@@ -44,6 +47,7 @@ pub struct SqlTeam {
 #[derive(Debug, Serialize, Clone)]
 pub struct PublicTeam {
     pub id: String,
+    pub name: String,
     pub owner: String,
     pub partner: String,
     pub competition_id: String,
@@ -57,6 +61,7 @@ impl From<SqlTeam> for Team {
     fn from(sql_team: SqlTeam) -> Self {
         Self {
             id: sql_team.id,
+            name: sql_team.name,
             owner: sql_team.owner,
             partner: sql_team.partner,
             competition_id: sql_team.competition_id,
@@ -72,6 +77,7 @@ impl From<Team> for PublicTeam {
     fn from(team: Team) -> Self {
         Self { 
             id: team.id,
+            name: team.name,
             owner: team.owner,
             partner: team.partner,
             competition_id: team.competition_id,
@@ -87,6 +93,7 @@ impl From<NewTeam> for SqlTeam {
     fn from(new_team: NewTeam) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
+            name: new_team.name,
             owner: new_team.owner,
             partner: "".to_string(),
             competition_id: new_team.competition_id,

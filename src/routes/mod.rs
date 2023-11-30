@@ -13,13 +13,16 @@ pub mod team_leave;
 pub mod team_disband;
 pub mod team_kick;
 pub mod team_get;
+pub mod team_get_all;
 pub mod team_bots;
 pub mod team_bot_change;
+pub mod team_rename;
 pub mod bot_upload;
 pub mod user_id;
 pub mod bot_win_rates;
 pub mod game_log;
 pub mod game_toggle_public;
 pub mod game_id;
+pub mod game_get_public;
 
 pub mod matchmaking_test;

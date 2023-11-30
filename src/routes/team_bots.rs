@@ -2,7 +2,7 @@ use actix_web::{HttpResponse, get, web};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use crate::{
     controllers::jwt::exchange_token_for_user, 
-    models::bot::PublicBot, 
+    models::{bot::PublicBot, user::Role}, 
     db::{
         operations_teams::get_team_by_id, 
         operations_bot::get_bots_by_team
@@ -23,7 +23,11 @@ pub async fn team_bots(auth: BearerAuth, team_id: web::Path<String>) -> HttpResp
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
-    if requesting_user.id != team.owner && requesting_user.id != team.partner {
+    if 
+        requesting_user.id != team.owner && 
+        requesting_user.id != team.partner && 
+        requesting_user.role != Role::Admin 
+    {
         return HttpResponse::Unauthorized().finish();
     }
 

@@ -32,7 +32,10 @@ use crate::routes::{
     game_toggle_public::game_toggle_public, 
     competition_team_count::competition_team_count, 
     game_id::game_id, 
-    competition_pack::competition_pack,
+    competition_pack::competition_pack, 
+    team_get_all::team_get_all, 
+    game_get_public::game_get_public, 
+    team_rename::team_name_change,
 };
 
 mod routes;
@@ -73,6 +76,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(user_me)
                 .service(user_id)
                 .service(login)
+                .service(team_name_change)
                 .service(team_create)
                 .service(team_disband)
                 .service(team_join)
@@ -81,6 +85,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(team_bots)
                 .service(team_bot_change)
                 .service(team_get)
+                .service(team_get_all)
                 .service(bot_upload)
                 .service(bots_win_rate)
                 .service(competition_create)
@@ -92,6 +97,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(competition_rounds)
                 .service(game_log)
                 .service(game_toggle_public)
+                .service(game_get_public)
                 .service(game_id)
                 .service(mmt)
             )

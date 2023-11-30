@@ -115,6 +115,14 @@ pub fn is_member_of_a_team_on_competition(user: User, comp_id: String) -> bool {
     }
 }
 
+pub fn set_team_name(team: &Team, new_name: String) -> Result<Team, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    let _ = diesel::update(teams.filter(id.eq(team.id.clone())))
+        .set(name.eq(new_name))
+        .execute(&mut conn)?;
+    get_team_by_id(team.id.clone())
+}
+
 pub fn set_team_bot(team: &Team, bot: BotSelector, bot_id: String) -> Result<(), Error> {
     let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
     let builder = diesel::update(teams.filter(id.eq(team.id.clone())));

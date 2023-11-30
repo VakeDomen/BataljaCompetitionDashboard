@@ -21,6 +21,7 @@ CREATE TABLE competitions (
 
 CREATE TABLE teams (
     id              VARCHAR(255) NOT NULL PRIMARY KEY,
+    name            VARCHAR(255) NOT NULL,
     owner           VARCHAR(255) NOT NULL,
     partner         VARCHAR(255) NOT NULL,
     competition_id  VARCHAR(255) NOT NULL,

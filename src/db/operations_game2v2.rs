@@ -59,3 +59,11 @@ pub fn game_set_public(game_id: String, public_state: bool) -> Result<(), Error>
         .execute(&mut conn)?;
     Ok(())
 }
+
+pub fn get_public_games() -> Result<Vec<Game2v2>, Error> {
+    let mut conn = establish_connection().expect("Failed to get a DB connection from the pool");
+    let games = games_2v2
+        .filter(public.eq(true))
+        .load::<SqlGame2v2>(&mut conn)?;
+    Ok(games.into_iter().map(Game2v2::from).collect::<Vec<Game2v2>>())
+}
