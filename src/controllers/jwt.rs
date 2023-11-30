@@ -9,11 +9,12 @@ use crate::{models::user::User, db::operations_users::get_user_by_username};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
    pub sub: String,
+   pub admin: bool,
    pub exp: usize,
 }
 
-pub fn encode_jwt(user_id: String) -> Result<String, Error> {
-    let claims = Claims{ sub: user_id, exp: (60 * 60 * 10000000) };
+pub fn encode_jwt(user_id: String, role: bool) -> Result<String, Error> {
+    let claims = Claims{ sub: user_id, admin: role, exp: (60 * 60 * 10000000) };
     let secret = env::var("JWT_SECRET").expect("Missing the JWT_SECRET environment variable.");
     encode(
         &Header::default(), 

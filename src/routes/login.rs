@@ -3,7 +3,7 @@ use serde::Deserialize;
 use crate::controllers::ldap::ldap_login;
 use crate::controllers::jwt::encode_jwt;
 use crate::db::operations_users::{get_user_by_studnet_number, insert_user};
-use crate::models::user::{NewUser, LdapUser};
+use crate::models::user::{NewUser, LdapUser, Role};
 use std::env;
 
 #[derive(Deserialize)]
@@ -30,7 +30,7 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
     if username.eq("admin") {
         let admin_pw = env::var("ADMIN_PASSWORD").expect("ADMIN_PASSWORD must be set");
         if password == admin_pw {
-            return match encode_jwt("admin".to_string()) {
+            return match encode_jwt("admin".to_string(), true) {
                 Ok(token) => HttpResponse::Ok().body(token),
                 Err(e) => HttpResponse::InternalServerError().json(e.to_string()),
             };
@@ -47,19 +47,24 @@ pub async fn login(body: web::Json<AuthPost>) -> HttpResponse {
         None => return HttpResponse::Unauthorized().finish()
     };
     
-    // insert new student
-    if let None = get_user_by_studnet_number(username.clone()).ok() {
-        let new_user = NewUser::from(LdapUser {
-            username: username.clone(), 
-            ldap_dn 
-        });
-        if let Err(e) = insert_user(new_user) {
-            return HttpResponse::InternalServerError().json(e.to_string());
-        }
+    // insert new student or find existing
+    let user_option = get_user_by_studnet_number(username.clone()).ok();
+    let user = match user_option {
+        None => {
+            let new_user = NewUser::from(LdapUser {
+                username: username.clone(), 
+                ldap_dn 
+            });
+            match insert_user(new_user) {
+                Ok(u) => u,
+                Err(e) => return HttpResponse::InternalServerError().json(e.to_string()),
+            } 
+        },
+        Some(u) => u,
     };
 
-
-    match encode_jwt(username) {
+    let is_admin = user.role == Role::Admin;
+    match encode_jwt(username, is_admin) {
         Ok(token) => HttpResponse::Ok().body(token),
         Err(e) => HttpResponse::InternalServerError().json(e.to_string()),
     }
