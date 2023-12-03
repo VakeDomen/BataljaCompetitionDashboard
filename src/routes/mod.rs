@@ -17,6 +17,7 @@ pub mod team_get_all;
 pub mod team_bots;
 pub mod team_bot_change;
 pub mod team_rename;
+pub mod team_id;
 pub mod bot_upload;
 pub mod user_id;
 pub mod bot_win_rates;

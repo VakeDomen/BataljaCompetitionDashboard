@@ -9,7 +9,7 @@ use crate::{
         operations_game2v2::get_game_by_id, 
         operations_teams::get_team_by_student_for_competition
     }, 
-    controllers::jwt::exchange_token_for_user
+    controllers::jwt::exchange_token_for_user, models::user::Role
 };
 
 #[derive(Debug, Serialize)]
@@ -36,12 +36,15 @@ pub async fn game_log(auth: Option<BearerAuth>, id: web::Path<String>) -> HttpRe
             Some(u) => u,
             None => return HttpResponse::Forbidden().finish(),
         };
-        let team = match get_team_by_student_for_competition(requesting_user, game.competition_id.clone()) {
-            Ok(t) => t,
-            Err(_) => return HttpResponse::Unauthorized().finish(),
-        };
-        if !team.id.eq(&game.team1_id) && !team.id.eq(&game.team2_id) {
-            return HttpResponse::Forbidden().finish();
+
+        if requesting_user.role != Role::Admin {
+            let team = match get_team_by_student_for_competition(requesting_user, game.competition_id.clone()) {
+                Ok(t) => t,
+                Err(_) => return HttpResponse::Unauthorized().finish(),
+            };
+            if !team.id.eq(&game.team1_id) && !team.id.eq(&game.team2_id) {
+                return HttpResponse::Forbidden().finish();
+            }
         }
     }
 

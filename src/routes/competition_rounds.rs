@@ -9,7 +9,7 @@ use crate::{
         operations_game2v2::get_rounds_for_competition, 
         operations_competition::get_competition_by_id
     }, 
-    models::game_2v2::Game2v2,
+    models::{game_2v2::Game2v2, user::Role},
 };
 
 type RoundData = (
@@ -33,7 +33,11 @@ pub async fn competition_rounds(auth: BearerAuth, team_id: web::Path<String>) ->
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
-    if requesting_user.id != team.owner && requesting_user.id != team.partner {
+    if 
+        requesting_user.id != team.owner && 
+        requesting_user.id != team.partner &&
+        requesting_user.role != Role::Admin
+    {
         return HttpResponse::Unauthorized().finish();
     }
 

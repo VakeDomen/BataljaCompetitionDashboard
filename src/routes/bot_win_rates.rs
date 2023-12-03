@@ -7,7 +7,7 @@ use crate::{
     db::{
         operations_teams::get_team_by_id, 
         operations_bot::get_bots_by_team, operations_game2v2::get_games_by_bot_id
-    }, models::game_2v2::Game2v2,
+    }, models::{game_2v2::Game2v2, user::Role},
 };
 
 #[get("/bots/wr/{team_id}")]
@@ -24,7 +24,11 @@ pub async fn bots_win_rate(auth: BearerAuth, team_id: web::Path<String>) -> Http
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
-    if requesting_user.id != team.owner && requesting_user.id != team.partner {
+    if 
+        requesting_user.id != team.owner && 
+        requesting_user.id != team.partner &&
+        requesting_user.role != Role::Admin
+    {
         return HttpResponse::Unauthorized().finish();
     }
 

@@ -35,7 +35,8 @@ use crate::routes::{
     competition_pack::competition_pack, 
     team_get_all::team_get_all, 
     game_get_public::game_get_public, 
-    team_rename::team_name_change,
+    team_rename::team_name_change, 
+    team_id::team_id,
 };
 
 mod routes;
@@ -76,6 +77,7 @@ async fn main() -> std::io::Result<()>  {
                 .service(user_me)
                 .service(user_id)
                 .service(login)
+                .service(team_id)
                 .service(team_name_change)
                 .service(team_create)
                 .service(team_disband)
