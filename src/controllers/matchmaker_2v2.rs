@@ -292,6 +292,7 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     let mut command_args = vec![
         "-jar".to_string(),
         "resources/gamefiles/Evaluator.jar".to_string(),
+        "--gui=false".to_string(),
     ];
     command_args.append(&mut bot_paths);
 
