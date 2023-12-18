@@ -328,7 +328,7 @@ fn run_match(competition: &Competition, team1: &Team, team2: &Team) -> Result<Ga
     });
 
     // Wait for the process to finish or timeout
-    let timeout_result: Option<ExitStatus> = child.wait_timeout(Duration::from_secs(60)).map_err(|e| MatchMakerError::IOError(e))?;
+    let timeout_result: Option<ExitStatus> = child.wait_timeout(Duration::from_secs(120)).map_err(|e| MatchMakerError::IOError(e))?;
     // Initialize flags for success and timeout
     // let mut timeout_occurred = false;
     // let mut success = true;
@@ -476,11 +476,12 @@ fn parse_bugged_game(_lines: Vec<String>, errors: Vec<String>, match_game: &mut 
 }
 
 fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut NewGame2v2) -> () {
-    let mut r_red = 0;
-    let mut r_blue = 0;
     let mut r_green = 0;
+    let mut r_blue = 0;
     let mut r_yellow = 0;
+    let mut r_cyan = 0;
     let mut current_bot: Option<String> = None;
+    let mut last_L: Option<String> = None;
     let mut stats: HashMap<String, GamePlayerStats> = HashMap::new();
     let mut stats_keys = vec![
         "team2bot2",
@@ -488,6 +489,8 @@ fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut
         "team2bot1",
         "team1bot1", 
     ];
+
+
 
     for line in lines.into_iter() {
         // track score through the game
@@ -498,13 +501,17 @@ fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut
             let parts: Vec<&str> = line.split(" ").collect();
             if parts.len() == 3 {
                 match parts[2] {
-                    "red"       => r_red    = parts[1].parse().unwrap_or(0),
-                    "blue"      => r_blue   = parts[1].parse().unwrap_or(0),
-                    "green"     => r_green  = parts[1].parse().unwrap_or(0),
+                    "green"     => r_green = parts[1].parse().unwrap_or(0),
+                    "blue"      => r_blue = parts[1].parse().unwrap_or(0),
                     "yellow"    => r_yellow = parts[1].parse().unwrap_or(0),
+                    "cyan"      => r_cyan = parts[1].parse().unwrap_or(0),
                     _ => ()
                 }
             }
+        }
+
+        if line.contains("L ") {
+            last_L = Some(line.to_owned());
         }
 
         if line.contains("STAT: ") {
@@ -592,8 +599,8 @@ fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut
 
     // if multiple teams alive at the end (timeout) check who won by score
     if match_game.winner_id.eq("") {
-        let t1_score = r_red + r_green;
-        let t2_score = r_blue + r_yellow;
+        let t1_score = r_yellow + r_green;
+        let t2_score = r_blue + r_cyan;
         
         if t1_score > t2_score {
             match_game.winner_id = match_game.team1_id.clone();
@@ -601,8 +608,11 @@ fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut
             match_game.winner_id = match_game.team2_id.clone();
         }
     }
-
-    match_game.additional_data = serde_json::to_string(&stats).unwrap_or(String::from("{ \"error\": \"Error serializing\"}"));
+    if stats.is_empty() && last_L.is_some() {
+        parse_bugged_game(vec![], vec![last_L.unwrap()], match_game)
+    } else {
+        match_game.additional_data = serde_json::to_string(&stats).unwrap_or(String::from("{ \"error\": \"Error serializing\"}"));
+    }
 }
 
 
@@ -626,7 +636,7 @@ fn parse_healthy_game(lines: Vec<String>, _errors: Vec<String>, match_game: &mut
 ///
 /// This function uses parallel processing for improved performance. Each team's bots are compiled in a separate thread.
 ///
-fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
+pub fn compile_team_bots(teams: Vec<Team>) -> Vec<Team> {
     // Parallel processing of each team to compile associated bots
     let results: Vec<Team> = teams.into_par_iter().filter_map(|team| {
         // Skip teams without both bot1 and bot2
@@ -724,7 +734,7 @@ fn contains_main_method(file_path: &str) -> io::Result<bool> {
 /// * No Java files are found in the unzipped directory.
 /// * The Java files cannot be compiled.
 /// 
-fn compile_bot(bot: &Bot) -> Result<(), MatchMakerError> {
+pub fn compile_bot(bot: &Bot) -> Result<(), MatchMakerError> {
     let workdir = Path::new("./resources/workdir/bots").join(bot.id.clone());
     let source_path = Path::new(&bot.source_path);
 

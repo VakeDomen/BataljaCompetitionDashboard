@@ -12,7 +12,7 @@ pub struct NewBot {
     pub source_path: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Bot {
     pub id: String,
     pub team_id: String,

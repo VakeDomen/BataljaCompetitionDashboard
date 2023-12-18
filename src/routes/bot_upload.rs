@@ -4,7 +4,7 @@ use actix_web::{HttpResponse, post};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{Local, Timelike, Datelike};
 use zip::ZipArchive;
-use crate::{controllers::jwt::exchange_token_for_user, models::{bot::{NewBot, PublicBot}, team::BotSelector}, db::{operations_teams::{get_team_by_id, set_team_bot}, operations_bot::insert_bot}};
+use crate::{controllers::{jwt::exchange_token_for_user, matchmaker_2v2::{compile_team_bots, compile_bot}}, models::{bot::{NewBot, PublicBot}, team::BotSelector}, db::{operations_teams::{get_team_by_id, set_team_bot}, operations_bot::{insert_bot, set_bot_error, get_bot_by_id}}};
 
 #[derive(MultipartForm)]
 pub struct BotUploadData {
@@ -80,6 +80,7 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
 
+    // if team's first bot, set as default bot
     if team.bot1.eq("") {
         if let Err(_) = set_team_bot(&team, BotSelector::First, bot.id.clone()) {
             return HttpResponse::InternalServerError().finish();
@@ -92,8 +93,20 @@ pub async fn bot_upload(auth: BearerAuth, payload: MultipartForm<BotUploadData>)
         } 
     }
 
-    match bot_file.file.persist(save_path) {
-        Ok(_) => HttpResponse::Ok().json(PublicBot::from(bot)),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to save file"),
+    if let Err(_) = bot_file.file.persist(save_path) {
+        return HttpResponse::InternalServerError().body("Failed to save file")
     }
+
+    // try if bot compiles
+    if let Err(e) = compile_bot(&bot) {
+        let _ = set_bot_error(bot.clone(), e.to_string());
+    }
+
+    // refetch the bot (fetch potential compilation errors)
+    let bot = match get_bot_by_id(bot.id) {
+        Ok(b) => b,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+    
+    HttpResponse::Ok().json(PublicBot::from(bot))
 }
